@@ -6,8 +6,8 @@ const (
 	ANSIColourGreen  = "\033[32m" // Success (Green)
 	ANSIColourYellow = "\033[33m" // Warning (Yellow)
 	ANSIColourRed    = "\033[31m" // Error (Red)
-  ANSIColourCyan = "\x1b[36m" // Info (Cyan)
-  ANSIReset        = "\033[0m"  // Reset color
+	ANSIColourCyan   = "\x1b[36m" // Info (Cyan)
+	ANSIReset        = "\033[0m"  // Reset color
 )
 
 func Info(format string, v ...any) {

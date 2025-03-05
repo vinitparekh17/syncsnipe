@@ -6,7 +6,11 @@ STATIC := ${FRONTEND_DIST}
 GOPATH ?= $(HOME)/go
 STUFFBIN ?= $(GOPATH)/bin/stuffbin
 
-VERSION := $(or $(SYNCSNIPE_VERSION),$(shell git describe --tags --abbrev=0 2> /dev/null),$(shell grep -oP 'tag: \Kv\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?' VERSION),"v0.0.0")
+VERSION := $(SYNCSNIPE_VERSION)
+VERSION ?= $(shell git describe --tags --abbrev=0 2> /dev/null)
+VERSION ?= $(shell grep -Eo 'tag: v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?' VERSION | cut -d' ' -f2)
+VERSION ?= v0.0.0
+
 
 BUILDSTR := ${VERSION} (\#${LAST_COMMIT} $(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
 
@@ -17,6 +21,21 @@ BUILDSTR := ${VERSION} (\#${LAST_COMMIT} $(shell date -u +"%Y-%m-%dT%H:%M:%S%z")
 
 help:  ## Display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+GOLANGCI_LINT_VERSION := 1.64.6
+
+check-golangci-lint:
+	@if ! command -v golangci-lint > /dev/null; then \
+		echo "golangci-lint not found."; \
+		exit 1; \
+	fi; \
+	installed_version=$$(golangci-lint version --format=short); \
+	if [ "$$installed_version" != "$(GOLANGCI_LINT_VERSION)" ]; then \
+		echo "Required golangci-lint version $(GOLANGCI_LINT_VERSION), but found $$installed_version."; \
+		echo "Please install golangci-lint version $(GOLANGCI_LINT_VERSION) with the following command:"; \
+		echo "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v$(GOLANGCI_LINT_VERSION)"; \
+		exit 1; \
+	fi
 
 
 # Install stuffbin if it doesn't exist.
@@ -47,6 +66,12 @@ build-backend: $(STUFFBIN) # Build the backend binary.
 	@CGO_ENABLED=0 go build -a \
 		-ldflags="-s -w" \
 		-o ${BIN} main.go
+
+frontend-lint: # Runs eslint for frontend 
+	@pnpm lint 
+
+backend-lint: check-golangci-lint # Runs golangci-lint
+	@golangci-lint run ./...
 
 build: frontend-build build-backend stuff # Main build target: builds both frontend and backend, then stuffs static assets into the binary.
 	@echo "→ Build successful."

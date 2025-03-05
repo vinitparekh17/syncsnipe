@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-  syncsnipe.Execute()
+	syncsnipe.Execute()
 }

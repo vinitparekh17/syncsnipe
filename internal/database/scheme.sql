@@ -1,32 +1,49 @@
-CREATE TABLE "products" (
-	"id"	INTEGER NOT NULL UNIQUE, -- product ID
-	"name"	TEXT NOT NULL,
-	"category"	TEXT NOT NULL,
-	"description"	TEXT,
-	"price"	REAL NOT NULL,
-	PRIMARY KEY("id" AUTOINCREMENT)
+CREATE TABLE IF NOT EXISTS files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_path TEXT NOT NULL,
+    target_path TEXT NOT NULL,
+    hash TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    mod_time INTEGER NOT NULL,
+    last_synced INTEGER NOT NULL,
+    UNIQUE(source_path, target_path)
 );
 
-CREATE TABLE "orders" (
-	"id"	INTEGER NOT NULL, -- order ID
-	"product_id"	INTEGER NOT NULL, -- product ID
-	"quantity"	INTEGER NOT NULL
+CREATE TABLE IF NOT EXISTS sync_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_dir TEXT NOT NULL UNIQUE,
+    target_dir TEXT NOT NULL,
+    enabled BOOLEAN DEFAULT 1,
+    last_run INTEGER,
+    last_run_successful BOOLEAN DEFAULT NULL, -- Track success or failure of last run
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    CHECK (source_dir != target_dir)
 );
 
-INSERT INTO "main"."products" (
-	"id",
-	"name",
-	"category",
-	"description",
-	"price"
-)
-VALUES
-	('1', 'Kayak', 'Watersports', 'A boat for one person', '275.0'),
-	('2', 'Lifejacket', 'Watersports', 'Protective and fashionable', '48.95'),
-	('3', 'Soccer Ball', 'Soccer', 'FIFA-approved size and weight', '19.5'),
-	('4', 'Corner Flags', 'Soccer', 'Give your playing field a professional touch', '34.95'),
-	('5', 'Stadium', 'Soccer', 'Flat-packed 35,000-seat stadium', '79500.0'),
-	('6', 'Thinking Cap', 'Chess', 'Improve brain efficiency by 75%', '16.0'),
-	('7', 'Unsteady Chair', 'Chess', 'Secretly give your opponent a disadvantage', '29.95'),
-	('8', 'Human Chess Board', 'Chess', 'A fun game for the family', '75.0'),
-	('9', 'Bling Bling King', 'Chess', 'Gold-plated, diamond-studded King', '1200.0');
+CREATE TABLE IF NOT EXISTS conflicts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_path TEXT NOT NULL,
+    target_path TEXT NOT NULL,
+    source_hash TEXT NOT NULL,
+    target_hash TEXT NOT NULL,
+    source_time INTEGER NOT NULL,
+    target_time INTEGER NOT NULL,
+    detected_at INTEGER NOT NULL,
+    resolution_status TEXT, -- 'unresolved', 'resolved_source', etc.
+    resolved_at INTEGER,    -- Timestamp of resolution
+    UNIQUE(source_path, target_path)
+);
+
+CREATE TABLE IF NOT EXISTS ignore_patterns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pattern TEXT NOT NULL UNIQUE,
+    type TEXT NOT NULL DEFAULT 'glob' -- Glob, Regex, or Exact
+);
+
+CREATE INDEX IF NOT EXISTS idx_files_source_path ON files(source_path);
+CREATE INDEX IF NOT EXISTS idx_files_target_path ON files(target_path);
+CREATE INDEX IF NOT EXISTS idx_conflicts_source_path ON conflicts(source_path);
+CREATE INDEX IF NOT EXISTS idx_conflicts_detected_at ON conflicts(detected_at);
+CREATE INDEX IF NOT EXISTS idx_sync_rules_enabled ON sync_rules(enabled);
+CREATE INDEX IF NOT EXISTS idx_sync_rules_source_dir ON sync_rules(source_dir);
