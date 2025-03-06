@@ -15,23 +15,29 @@ var rootCmd = &cobra.Command{Use: "syncsnipe"}
 func Execute() {
 
 	db := database.GetDatabase()
+
 	watcher, err := sync.NewSyncWatcher()
 	if err != nil {
 		colorlog.Error("unable to start watcher: %v", err)
 		os.Exit(1)
 	}
 
-  go watcher.Start()
-  if err := db.Ping(); err != nil {
-    colorlog.Error("error while pinging db: %v", err)
-    os.Exit(1)
-  } else {
-    colorlog.Success("Successfully Connected to sqlite")
-  }
+	go watcher.Start()
+
+	if err := db.Ping(); err != nil {
+		colorlog.Error("error while pinging db: %v", err)
+		os.Exit(1)
+	} else {
+		if err := db.LoadSchema(); err != nil {
+			colorlog.Error("unable to load schema: %v", err)
+			os.Exit(1)
+		}
+		colorlog.Success("Successfully Connected to sqlite")
+	}
 	syncSnipeApp := &core.App{
 		DB:      db,
 		Watcher: watcher,
-  }
+	}
 
 	rootCmd.AddCommand(NewWebCmd(syncSnipeApp))
 	rootCmd.AddCommand(NewCliCmd(syncSnipeApp))

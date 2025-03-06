@@ -28,7 +28,7 @@ func GetDatabase() *Db {
   return &Db{db}
 }
 
-func (db *Db) InstallSchema() error {
+func (db *Db) LoadSchema() error {
   fs, err := stuffbin.UnStuff(schemaFile)
    if err != nil {
     if err == stuffbin.ErrNoID {
@@ -45,6 +45,7 @@ func (db *Db) InstallSchema() error {
     }
   }
 
+  if !tableExists(db, "file") {
   file, err := fs.Get(schemaFile)
   if err != nil {
     colorlog.Error("error getting schema.sql: %v", err)
@@ -53,11 +54,18 @@ func (db *Db) InstallSchema() error {
 
   _, err = db.Exec(string(file.ReadBytes()))
   return err 
+  } else {
+    return nil
+  }
 }
 
-func (db *Db) CheckSchema() (bool, error) {
-  if _, err := db.Exec("SELECT * FROM settings LIMIT 1"); err != nil {
-    return false, err
-  }
-  return true, nil
+
+func tableExists(db *Db, tableName string) bool {
+	query := "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name=?);"
+	var exists int
+	err := db.QueryRow(query, tableName).Scan(&exists)
+	if err != nil {
+		colorlog.Error("%v",err)
+	}
+	return exists == 1
 }
