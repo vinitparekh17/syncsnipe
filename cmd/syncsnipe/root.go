@@ -29,8 +29,11 @@ func Execute() {
 		}
 		colorlog.Success("Successfully Connected to sqlite")
 	}
+
+	dbTx := database.New(db)
+
 	syncSnipeApp := &core.App{
-		DB:      db,
+		DbQuery: dbTx,
 		Watcher: watcher,
 	}
 

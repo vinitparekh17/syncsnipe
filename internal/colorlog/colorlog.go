@@ -27,5 +27,5 @@ func Error(format string, v ...any) {
 }
 
 func Fetal(format string, v ...any) {
-  log.Fatalf(ANSIColourRed+" "+format+ANSIReset, v...)
+	log.Fatalf(ANSIColourRed+" "+format+ANSIReset, v...)
 }

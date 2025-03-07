@@ -9,9 +9,9 @@ import (
 
 // TODO: reconsider behaviour to tackle errors rather than log.Fetal
 func LoadFile(filePath string) stuffbin.FileSystem {
-  path, err := os.Executable() // get self executable path
+	path, err := os.Executable() // get self executable path
 	if err != nil {
-    colorlog.Fetal("error while getting self executable path: %v", err)
+		colorlog.Fetal("error while getting self executable path: %v", err)
 	}
 
 	fs, err := stuffbin.UnStuff(path)

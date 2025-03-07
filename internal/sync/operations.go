@@ -13,15 +13,15 @@ type SyncOperation struct {
 }
 
 type SyncWorker struct {
-  db *sql.DB
-  syncQueue chan SyncOperation
-  rules map[string]string
+	db        *sql.DB
+	syncQueue chan SyncOperation
+	rules     map[string]string
 }
 
 func NewSyncWorker(db *sql.DB, syncQueue chan SyncOperation) *SyncWorker {
-  return &SyncWorker{
-    db: db,
-    syncQueue: syncQueue,
-    rules: make(map[string]string),
-  }
+	return &SyncWorker{
+		db:        db,
+		syncQueue: syncQueue,
+		rules:     make(map[string]string),
+	}
 }

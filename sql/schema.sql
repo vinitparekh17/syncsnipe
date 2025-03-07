@@ -1,3 +1,8 @@
+PRAGMA foreign_keys = ON;
+PRAGMA journal_mode = WAL;
+PRAGMA synchronous = NORMAL;
+PRAGMA cache_size = -64000;
+
 CREATE TABLE IF NOT EXISTS profiles (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE, -- Profile name (e.g., "Work", "Pictures")
@@ -25,7 +30,7 @@ CREATE TABLE IF NOT EXISTS sync_rules (
     last_run_successful BOOLEAN DEFAULT NULL, -- Track success or failure of last run
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
-    CHECK (source_dir != target_dir)
+    CHECK (source_dir != target_dir),
     FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 
@@ -47,7 +52,7 @@ CREATE TABLE IF NOT EXISTS ignore_patterns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     profile_id INTEGER NOT NULL
     pattern TEXT NOT NULL UNIQUE,
-    type TEXT NOT NULL DEFAULT 'glob' -- Glob, Regex, or Exact
+    type TEXT NOT NULL DEFAULT 'glob', -- Glob, Regex, or Exact
     FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 

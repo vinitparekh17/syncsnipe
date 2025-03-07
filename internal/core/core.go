@@ -6,7 +6,7 @@ import (
 )
 
 type App struct {
-	DB      *database.Db
+	DbQuery *database.Queries
 	Watcher *sync.SyncWatcher
 	Worker  *sync.SyncWorker
 }

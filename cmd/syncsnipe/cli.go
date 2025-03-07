@@ -6,7 +6,7 @@ import (
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
 	"github.com/vinitparekh17/syncsnipe/internal/core"
 )
- 
+
 func NewCliCmd(app *core.App) *cobra.Command {
 	cliCmd := &cobra.Command{
 		Use:   "cli",

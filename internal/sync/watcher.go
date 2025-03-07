@@ -120,11 +120,11 @@ func (sw *SyncWatcher) RemoveDirectory(path string) error {
 }
 
 func (sw *SyncWatcher) Close() error {
-  sw.mu.Lock()
-  defer sw.mu.Unlock()
-  err := sw.watcher.Close()
-  if err == nil {
-    close(sw.syncQueue)
-  }
-  return err
+	sw.mu.Lock()
+	defer sw.mu.Unlock()
+	err := sw.watcher.Close()
+	if err == nil {
+		close(sw.syncQueue)
+	}
+	return err
 }

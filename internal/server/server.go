@@ -15,18 +15,18 @@ import (
 
 type SyncServer struct {
 	server *http.Server
-  Mux *http.ServeMux
+	Mux    *http.ServeMux
 }
 
 func NewServer(app *core.App) *SyncServer {
-  mux := NewMuxRouter()
+	mux := NewMuxRouter()
 	return &SyncServer{
 		server: &http.Server{
 			Addr:        ":8080",
 			Handler:     mux,
 			ReadTimeout: 5 * time.Second,
 		},
-    Mux: mux,
+		Mux: mux,
 	}
 }
 
@@ -50,8 +50,8 @@ func (s *SyncServer) Run() error {
 	select {
 	case <-ctx.Done():
 		colorlog.Info("shutting down the server")
-    shutDownCtx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
-    defer cancel()
+		shutDownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		return s.ShutDown(shutDownCtx)
 	case err := <-errChan:
 		return err

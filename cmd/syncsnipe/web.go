@@ -24,7 +24,7 @@ func NewWebCmd(app *core.App) *cobra.Command {
 			server := server.NewServer(app)
 			fs := stuffbin.LoadFile(staticFile)
 			server.Mux.Handle("/", handler.HandleStaticFiles(staticFile, fs))
-      if err := server.Run(); err != nil {
+			if err := server.Run(); err != nil {
 				colorlog.Error("%v", err)
 				os.Exit(1)
 			}
