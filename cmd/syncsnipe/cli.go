@@ -22,7 +22,7 @@ var syncCmd = &cobra.Command{
 	Use:   "sync",
 	Short: "synchronize files with backup",
 	Run: func(cmd *cobra.Command, args []string) {
-		cli.SyncDIri(args)
+		cli.SyncDirs(args)
 	},
 }
 
