@@ -25,3 +25,7 @@ func Warn(format string, v ...any) {
 func Error(format string, v ...any) {
 	log.Printf(ANSIColourRed+" "+format+ANSIReset, v...)
 }
+
+func Fetal(format string, v ...any) {
+  log.Fatalf(ANSIColourRed+" "+format+ANSIReset, v...)
+}

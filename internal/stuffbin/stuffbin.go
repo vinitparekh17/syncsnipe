@@ -7,25 +7,24 @@ import (
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
 )
 
+// TODO: reconsider behaviour to tackle errors rather than log.Fetal
 func LoadFile(filePath string) stuffbin.FileSystem {
-	path, err := os.Executable()
+  path, err := os.Executable() // get self executable path
 	if err != nil {
-		colorlog.Error("%v", err)
-		os.Exit(1)
+    colorlog.Fetal("error while getting self executable path: %v", err)
 	}
 
 	fs, err := stuffbin.UnStuff(path)
 	if err != nil {
 		if err == stuffbin.ErrNoID {
-			colorlog.Warn("unstuff failed in binary, using local file system for %s path", filePath)
+			colorlog.Warn("unstuff failed in binary, attempting to use local file system for %s path", filePath)
 
 			fs, err = stuffbin.NewLocalFS("/", filePath)
 			if err != nil {
-				colorlog.Error("error initializing local file system: %v", err)
-				os.Exit(1)
+				colorlog.Fetal("error initializing local file system: %v", err)
 			}
 		} else {
-			colorlog.Error("error initializing FS: %v", err)
+			colorlog.Fetal("unable to unstuff %s path err: %v", filePath, err)
 		}
 	}
 	return fs

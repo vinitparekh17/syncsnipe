@@ -1,3 +1,9 @@
+CREATE TABLE IF NOT EXISTS profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE, -- Profile name (e.g., "Work", "Pictures")
+    created_at INTEGER DEFAULT (strftime('%s', 'now'))
+);
+
 CREATE TABLE IF NOT EXISTS files (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source_path TEXT NOT NULL,
@@ -11,6 +17,7 @@ CREATE TABLE IF NOT EXISTS files (
 
 CREATE TABLE IF NOT EXISTS sync_rules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_id INTEGER NOT NULL,
     source_dir TEXT NOT NULL UNIQUE,
     target_dir TEXT NOT NULL,
     enabled BOOLEAN DEFAULT 1,
@@ -19,6 +26,7 @@ CREATE TABLE IF NOT EXISTS sync_rules (
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     CHECK (source_dir != target_dir)
+    FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS conflicts (
@@ -37,8 +45,10 @@ CREATE TABLE IF NOT EXISTS conflicts (
 
 CREATE TABLE IF NOT EXISTS ignore_patterns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_id INTEGER NOT NULL
     pattern TEXT NOT NULL UNIQUE,
     type TEXT NOT NULL DEFAULT 'glob' -- Glob, Regex, or Exact
+    FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_files_source_path ON files(source_path);

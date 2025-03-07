@@ -1,8 +1,6 @@
 package syncsnipe
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
 	"github.com/vinitparekh17/syncsnipe/internal/core"
@@ -18,19 +16,16 @@ func Execute() {
 
 	watcher, err := sync.NewSyncWatcher()
 	if err != nil {
-		colorlog.Error("unable to start watcher: %v", err)
-		os.Exit(1)
+		colorlog.Fetal("unable to start watcher: %v", err)
 	}
 
 	go watcher.Start()
 
 	if err := db.Ping(); err != nil {
-		colorlog.Error("error while pinging db: %v", err)
-		os.Exit(1)
+		colorlog.Fetal("error while pinging db: %v", err)
 	} else {
 		if err := db.LoadSchema(); err != nil {
-			colorlog.Error("unable to load schema: %v", err)
-			os.Exit(1)
+			colorlog.Fetal("unable to load schema: %v", err)
 		}
 		colorlog.Success("Successfully Connected to sqlite")
 	}
@@ -42,6 +37,6 @@ func Execute() {
 	rootCmd.AddCommand(NewWebCmd(syncSnipeApp))
 	rootCmd.AddCommand(NewCliCmd(syncSnipeApp))
 	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
+		colorlog.Fetal("enable to exec root command: %v", err)
 	}
 }
