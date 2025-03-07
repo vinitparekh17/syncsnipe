@@ -1,82 +1,89 @@
-# Try to get the commit hash from 1) git 2) the VERSION file 3) fallback.
+# Adapted from https://www.thapaliya.com/en/writings/well-documented-makefiles/
+
 BIN := syncsnipe
 FRONTEND_DIR := frontend
-FRONTEND_DIST := ${FRONTEND_DIR}/build
-STATIC := ${FRONTEND_DIST}
+FRONTEND_DIST := $(FRONTEND_DIR)/build
 GOPATH ?= $(HOME)/go
 STUFFBIN ?= $(GOPATH)/bin/stuffbin
+GOLANGCI_LINT_VERSION ?= 1.55.2
+STUFFBIN_VERSION ?= v1.3.0
+LAST_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+VERSION ?= $(SYNCSNIPE_VERSION)
+VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null || echo "no-tag")
+VERSION ?= $(shell grep -m1 '^v[0-9]+\.[0-9]+\.[0-9]+' VERSION 2>/dev/null || echo "v0.0.0")
+BUILDSTR := $(VERSION) (\#$(LAST_COMMIT) $(shell date -u +"%FT%T%Z"))
 
-VERSION := $(SYNCSNIPE_VERSION)
-VERSION ?= $(shell git describe --tags --abbrev=0 2> /dev/null)
-VERSION ?= $(shell grep -Eo 'tag: v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?' VERSION | cut -d' ' -f2)
-VERSION ?= v0.0.0
-
-
-BUILDSTR := ${VERSION} (\#${LAST_COMMIT} $(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
-
-# The default target to run when `make` is executed.
 .DEFAULT_GOAL := build
+.PHONY: help install-deps build-frontend build-backend run-frontend run-backend build stuff format lint check-golangci-lint generate-sqlc push frontend-lint backend-lint format-frontend format-backend
 
-.PHONY: help install-deps build-frontend build-backend run-frontend run-backend build stuff
+##@ HELP & UTILS
 
-help:  ## Display this help
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+help: ## Display help message with available targets
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf " \033[36m%-25s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-GOLANGCI_LINT_VERSION := 1.64.6
+##@ DEPENDENCIES
 
-check-golangci-lint:
-	@if ! command -v golangci-lint > /dev/null; then \
-		echo "golangci-lint not found."; \
-		exit 1; \
-	fi; \
-	installed_version=$$(golangci-lint version --format=short); \
-	if [ "$$installed_version" != "$(GOLANGCI_LINT_VERSION)" ]; then \
-		echo "Required golangci-lint version $(GOLANGCI_LINT_VERSION), but found $$installed_version."; \
-		echo "Please install golangci-lint version $(GOLANGCI_LINT_VERSION) with the following command:"; \
-		echo "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v$(GOLANGCI_LINT_VERSION)"; \
-		exit 1; \
-	fi
+install-deps: $(STUFFBIN) ## Install dependencies for backend and frontend 
+	@cd $(FRONTEND_DIR) && pnpm install --frozen-lockfile
 
+$(STUFFBIN): ## Install stuffbin if missing
+	@go install github.com/knadh/stuffbin@$(STUFFBIN_VERSION)
 
-# Install stuffbin if it doesn't exist.
-$(STUFFBIN):
-	@echo "→ Installing stuffbin..."
-	@go install github.com/knadh/stuffbin/...
+check-golangci-lint: ## Ensure golangci-lint is installed and at the correct version
+	@command -v golangci-lint >/dev/null || { echo "golangci-lint missing, install it: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v$(GOLANGCI_LINT_VERSION)"; exit 1; }
+	@golangci-lint version --format=short | grep - q "^$(GOLANGCI_LINT_VERSION)$$" || { echo "Need golangci-lint $(GOLANGCI_LINT_VERSION), run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v$(GOLANGCI_LINT_VERSION)"; exit 1; }
 
-install-deps: $(STUFFBIN) # Install dependencies for both backend and frontend.
-	@echo "→ Installing frontend dependencies..."
-	@cd ${FRONTEND_DIR} && pnpm install
+##@ FRONTEND TASKS
 
-frontend-build: install-deps # Build the frontend for production.
-	@echo "→ Building frontend for production..."
-	@export VITE_APP_VERSION="${VERSION}" && cd ${FRONTEND_DIR} && pnpm build
+build-frontend: install-deps ## Build the frontend for production
+	@cd $(FRONTEND_DIR) && VITE_APP_VERSION="$(VERSION)" pnpm build || { echo "Frontend build failed, check logs"; exit 1; }
 
-run-backend: # Run the Go backend server in development mode.
-	@echo "→ Running backend..."
-	CGO_ENABLED=0 go run -ldflags="-s -w" main.go
+run-frontend: ## Run the frontend development server
+	@cd $(FRONTEND_DIR) && VITE_APP_VERSION="$(VERSION)" pnpm dev
 
-run-frontend: # Run the JS frontend server in development mode.
-	@echo "→ Installing frontend dependencies (if not already installed)..."
-	@cd ${FRONTEND_DIR} && pnpm install
-	@echo "→ Running frontend..."
-	@export VITE_APP_VERSION="${VERSION}" && cd ${FRONTEND_DIR} && pnpm dev
+frontend-lint: ## Runs eslint for frontend 
+	@cd $(FRONTEND_DIR) && pnpm lint || { echo "Frontend linting failed"; exit 1; }
 
-build-backend: $(STUFFBIN) # Build the backend binary.
-	@echo "→ Building backend..."
-	@CGO_ENABLED=0 go build -a \
-		-ldflags="-s -w" \
-		-o ${BIN} main.go
+format-frontend: ## Format frontend code
+	@cd $(FRONTEND_DIR) && pnpm format
 
-frontend-lint: # Runs eslint for frontend 
-	@pnpm lint 
+##@ BACKEND TASKS
 
-backend-lint: check-golangci-lint # Runs golangci-lint
-	@golangci-lint run ./...
+build-backend: $(STUFFBIN) ## Build the backend binary
+	@CGO_ENABLED=0 go build -a -ldflags="-s -w -X main.BuildString='$(BUILDSTR)'" -o $(BIN) cmd/syncsnipe/main.go
 
-build: frontend-build build-backend stuff # Main build target: builds both frontend and backend, then stuffs static assets into the binary.
-	@echo "→ Build successful."
+run-backend: ## Run the Go backend server in development mode
+	@CGO_ENABLED=0 go run -ldflags="-s -w -X main.BuildString='$(BUILDSTR)'" cmd/syncsnipe/main.go
 
-stuff: $(STUFFBIN) # Stuff static assets into the binary using stuffbin.
-	@echo "→ Stuffing static assets into binary..."
-	@$(STUFFBIN) -a stuff -in ${BIN} -out ${BIN} ${STATIC}
+backend-lint: check-golangci-lint ## Runs golangci-lint for backend
+	@golangci-lint run ./... || { echo "Backend linting failed"; exit 1; }
 
+format-backend: ## Format backend code
+	@goimports -w ./...
+
+##@ DATABASE MIGRATION & SQLC
+
+generate-sqlc: ## Generate SQLC code
+	@test -f sqlc.yaml || { echo "sqlc.yaml missing, you madlad"; exit 1; }
+	@docker run --rm -v $(pwd):/src -w /src sqlc/sqlc:1.26.0 generate || { echo "SQLC gen failed, check your SQL"; exit 1; }
+
+##@ BUILD & DEPLOYMENT
+
+build: build-frontend build-backend stuff ## Build both frontend and backend, then bundle static assets
+	@echo "→ Build complete, you legend."
+
+stuff: $(STUFFBIN) ## Bundle static assets into binary using stuffbin
+	@$(STUFFBIN) -a stuff -in $(BIN) -out $(BIN) $(FRONTEND_DIST)
+
+##@ FORMATTING & LINTING
+
+format: format-frontend format-backend ## Format entire workspace
+	@echo "→ Formatting complete."
+
+lint: frontend-lint backend-lint ## Run linting for both frontend and backend
+	@echo "→ Linting complete."
+
+##@ GIT ACTIONS
+
+push: lint format ## Lint, format, and push code to Git
+	@git push origin main
