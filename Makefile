@@ -5,7 +5,7 @@ FRONTEND_DIR := frontend
 FRONTEND_DIST := $(FRONTEND_DIR)/build
 GOPATH ?= $(HOME)/go
 STUFFBIN ?= $(GOPATH)/bin/stuffbin
-GOLANGCI_LINT_VERSION ?= 1.55.2
+GOLANGCI_LINT_VERSION ?= 1.64.6
 STUFFBIN_VERSION ?= v1.3.0
 LAST_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 VERSION ?= $(SYNCSNIPE_VERSION)
@@ -29,9 +29,18 @@ install-deps: $(STUFFBIN) ## Install dependencies for backend and frontend
 $(STUFFBIN): ## Install stuffbin if missing
 	@go install github.com/knadh/stuffbin@$(STUFFBIN_VERSION)
 
-check-golangci-lint: ## Ensure golangci-lint is installed and at the correct version
-	@command -v golangci-lint >/dev/null || { echo "golangci-lint missing, install it: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v$(GOLANGCI_LINT_VERSION)"; exit 1; }
-	@golangci-lint version --format=short | grep - q "^$(GOLANGCI_LINT_VERSION)$$" || { echo "Need golangci-lint $(GOLANGCI_LINT_VERSION), run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v$(GOLANGCI_LINT_VERSION)"; exit 1; }
+check-golangci-lint:
+	@if ! command -v golangci-lint > /dev/null; then \
+		echo "golangci-lint not found."; \
+		exit 1; \
+	fi; \
+	installed_version=$$(golangci-lint version --format=short); \
+	if [ "$$installed_version" != "$(GOLANGCI_LINT_VERSION)" ]; then \
+		echo "Required golangci-lint version $(GOLANGCI_LINT_VERSION), but found $$installed_version."; \
+		echo "Please install golangci-lint version $(GOLANGCI_LINT_VERSION) with the following command:"; \
+		echo "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v$(GOLANGCI_LINT_VERSION)"; \
+		exit 1; \
+	fi
 
 ##@ FRONTEND TASKS
 
@@ -59,13 +68,13 @@ backend-lint: check-golangci-lint ## Runs golangci-lint for backend
 	@golangci-lint run ./... || { echo "Backend linting failed"; exit 1; }
 
 format-backend: ## Format backend code
-	@goimports -w ./...
+	@go fmt ./...
 
 ##@ DATABASE MIGRATION & SQLC
 
 generate-sqlc: ## Generate SQLC code
 	@test -f sqlc.yaml || { echo "sqlc.yaml missing, you madlad"; exit 1; }
-	@docker run --rm -v $(pwd):/src -w /src sqlc/sqlc:1.26.0 generate || { echo "SQLC gen failed, check your SQL"; exit 1; }
+	docker run --rm -v $(shell pwd):/src -w /src sqlc/sqlc generate || { echo "SQLC gen failed, check your SQL"; exit 1; }
 
 ##@ BUILD & DEPLOYMENT
 

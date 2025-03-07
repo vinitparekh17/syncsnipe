@@ -6,5 +6,3 @@ INSERT INTO profiles (name) VALUES (?) RETURNING *;
 
 -- name: GetConflictById :one
 SELECT * FROM conflicts WHERE id = ?
-
-
