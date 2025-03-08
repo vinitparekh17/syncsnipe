@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS conflicts (
 
 CREATE TABLE IF NOT EXISTS ignore_patterns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    profile_id INTEGER NOT NULL
+    profile_id INTEGER NOT NULL,
     pattern TEXT NOT NULL UNIQUE,
     type TEXT NOT NULL DEFAULT 'glob', -- Glob, Regex, or Exact
     FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE

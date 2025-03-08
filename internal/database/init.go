@@ -2,49 +2,32 @@ package database
 
 import (
 	"database/sql"
-	"path/filepath"
 
-	"github.com/knadh/stuffbin"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
+	"github.com/vinitparekh17/syncsnipe/internal/stuffbin"
 )
 
 const dbFile = "syncsnipe.db"
 
-var schemaFile = filepath.Join("sql", "schema.sql")
-
-type Db struct {
+type DB struct {
 	*sql.DB
 }
 
-func GetDatabase() *Db {
+func GetDatabase() *DB {
 	db, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
 		colorlog.Fetal("failed to open db connection: %v", err)
 	}
 
-	return &Db{db}
+	return &DB{db}
 }
 
-func (db *Db) LoadSchema() error {
-	fs, err := stuffbin.UnStuff(schemaFile)
-	if err != nil {
-		if err == stuffbin.ErrNoID {
-			colorlog.Error("unstuff failed in binary, using local file system for static files")
-
-			fs, err = stuffbin.NewLocalFS("/", schemaFile)
-			if err != nil {
-				colorlog.Error("error loading schema.sql in local fs: %v", err)
-				return err
-			}
-		} else {
-			colorlog.Error("error initializing FS: %v", err)
-			return err
-		}
-	}
+func (db *DB) LoadSchema(filePath string) error {
+	fs := stuffbin.LoadFile(filePath)
 
 	if !tableExists(db, "file") {
-		file, err := fs.Get(schemaFile)
+		file, err := fs.Get(filePath)
 		if err != nil {
 			colorlog.Error("error getting schema.sql: %v", err)
 			return err
@@ -57,7 +40,7 @@ func (db *Db) LoadSchema() error {
 	}
 }
 
-func tableExists(db *Db, tableName string) bool {
+func tableExists(db *DB, tableName string) bool {
 	query := "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name=?);"
 	var exists int
 	err := db.QueryRow(query, tableName).Scan(&exists)

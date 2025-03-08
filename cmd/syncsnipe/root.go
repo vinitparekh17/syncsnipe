@@ -1,6 +1,8 @@
 package syncsnipe
 
 import (
+	"path/filepath"
+
 	"github.com/spf13/cobra"
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
 	"github.com/vinitparekh17/syncsnipe/internal/core"
@@ -9,6 +11,8 @@ import (
 )
 
 var rootCmd = &cobra.Command{Use: "syncsnipe"}
+var schemaFile = filepath.Join("sql", "schema.sql")
+
 
 func Execute() {
 
@@ -24,7 +28,7 @@ func Execute() {
 	if err := db.Ping(); err != nil {
 		colorlog.Fetal("error while pinging db: %v", err)
 	} else {
-		if err := db.LoadSchema(); err != nil {
+		if err := db.LoadSchema(schemaFile); err != nil {
 			colorlog.Fetal("unable to load schema: %v", err)
 		}
 		colorlog.Success("Successfully Connected to sqlite")
@@ -33,7 +37,7 @@ func Execute() {
 	dbTx := database.New(db)
 
 	syncSnipeApp := &core.App{
-		DbQuery: dbTx,
+		DBQuery: dbTx,
 		Watcher: watcher,
 	}
 

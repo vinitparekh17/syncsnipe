@@ -84,13 +84,26 @@ build: build-frontend build-backend stuff ## Build both frontend and backend, th
 stuff: $(STUFFBIN) ## Bundle static assets into binary using stuffbin
 	@$(STUFFBIN) -a stuff -in $(BIN) -out $(BIN) $(FRONTEND_DIST)
 
-##@ FORMATTING & LINTING
+##@ FORMATTING & LINTING & AUDITING
 
 format: format-frontend format-backend ## Format entire workspace
 	@echo "→ Formatting complete."
 
 lint: frontend-lint backend-lint ## Run linting for both frontend and backend
 	@echo "→ Linting complete."
+
+audit: ## Run various code audits for security and best practices
+	@echo "→ Running Go module verification..."
+	@go mod verify
+	@echo "→ Running Go vet..."
+	@go vet ./...
+	@echo "→ Running Staticcheck..."
+	@go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
+	@echo "→ Running vulnerability scan..."
+	@go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	@echo "→ Running tests with race detection..."
+	@go test -race -buildvcs -vet=off ./...
+
 
 ##@ GIT ACTIONS
 

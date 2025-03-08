@@ -8,6 +8,8 @@ import (
 )
 
 // TODO: reconsider behaviour to tackle errors rather than log.Fetal
+
+// LoadFile loads the file from linked binary / from local file system at given filePath parameter
 func LoadFile(filePath string) stuffbin.FileSystem {
 	path, err := os.Executable() // get self executable path
 	if err != nil {
