@@ -107,5 +107,5 @@ audit: ## Run various code audits for security and best practices
 
 ##@ GIT ACTIONS
 
-push: lint format ## Lint, format, and push code to Git
+push: format lint ## Lint, format, and push code to Git
 	@git push origin main

@@ -13,7 +13,6 @@ import (
 var rootCmd = &cobra.Command{Use: "syncsnipe"}
 var schemaFile = filepath.Join("sql", "schema.sql")
 
-
 func Execute() {
 
 	db := database.GetDatabase()
