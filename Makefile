@@ -3,6 +3,7 @@
 BIN := syncsnipe
 FRONTEND_DIR := frontend
 FRONTEND_DIST := $(FRONTEND_DIR)/build
+STATIC := $(FRONTEND_DIST) sql
 GOPATH ?= $(HOME)/go
 STUFFBIN ?= $(GOPATH)/bin/stuffbin
 GOLANGCI_LINT_VERSION ?= 1.64.6
@@ -23,11 +24,12 @@ help: ## Display help message with available targets
 
 ##@ DEPENDENCIES
 
-install-deps: $(STUFFBIN) ## Install dependencies for backend and frontend 
+install-deps: ## Install dependencies for backend and frontend 
 	@cd $(FRONTEND_DIR) && pnpm install --frozen-lockfile
 
 $(STUFFBIN): ## Install stuffbin if missing
-	@go install github.com/knadh/stuffbin@$(STUFFBIN_VERSION)
+	@echo "Installing stuffbin if missing..."
+	@go install github.com/knadh/stuffbin/...
 
 check-golangci-lint:
 	@if ! command -v golangci-lint > /dev/null; then \
@@ -59,10 +61,10 @@ format-frontend: ## Format frontend code
 ##@ BACKEND TASKS
 
 build-backend: $(STUFFBIN) ## Build the backend binary
-	@CGO_ENABLED=0 go build -a -ldflags="-s -w -X main.BuildString='$(BUILDSTR)'" -o $(BIN) cmd/syncsnipe/main.go
+	@go build -a -ldflags="-s -w" -o $(BIN) main.go
 
 run-backend: ## Run the Go backend server in development mode
-	@CGO_ENABLED=0 go run -ldflags="-s -w -X main.BuildString='$(BUILDSTR)'" cmd/syncsnipe/main.go
+	@CGO_ENABLED=0 go run -ldflags="-s -w" main.go
 
 backend-lint: check-golangci-lint ## Runs golangci-lint for backend
 	@golangci-lint run ./... || { echo "Backend linting failed"; exit 1; }
@@ -74,7 +76,7 @@ format-backend: ## Format backend code
 
 generate-sqlc: ## Generate SQLC code
 	@test -f sqlc.yaml || { echo "sqlc.yaml missing, you madlad"; exit 1; }
-	docker run --rm -v $(shell pwd):/src -w /src sqlc/sqlc generate || { echo "SQLC gen failed, check your SQL"; exit 1; }
+	@docker run --rm -v $(shell pwd):/src -w /src sqlc/sqlc generate || { echo "SQLC gen failed, check your SQL"; exit 1; }
 
 ##@ BUILD & DEPLOYMENT
 
@@ -82,7 +84,7 @@ build: build-frontend build-backend stuff ## Build both frontend and backend, th
 	@echo "→ Build complete, you legend."
 
 stuff: $(STUFFBIN) ## Bundle static assets into binary using stuffbin
-	@$(STUFFBIN) -a stuff -in $(BIN) -out $(BIN) $(FRONTEND_DIST)
+	@$(STUFFBIN) -a stuff -in $(BIN) -out $(BIN) $(FRONTEND_DIST) $(SCHEMA_DIR)
 
 ##@ FORMATTING & LINTING & AUDITING
 
