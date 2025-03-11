@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -41,6 +42,7 @@ func NewServer(app *core.App, port string) *SyncServer {
 func NewMuxRouter() *http.ServeMux {
 	mux := http.NewServeMux()
 	fs := stuffbin.LoadFile(handler.FrontendDir)
+	mux.Handle("/_app/", http.StripPrefix("/_app/", http.FileServer(http.Dir(filepath.Join(handler.FrontendDir, "_app")))))
 	mux.HandleFunc("/", handler.ServeIndexPage(fs))
 	return mux
 }

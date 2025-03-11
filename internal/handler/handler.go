@@ -3,8 +3,8 @@ package handler
 import (
 	"database/sql"
 	"net/http"
-	"path"
 	"path/filepath"
+	"time"
 
 	"github.com/knadh/stuffbin"
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
@@ -26,21 +26,20 @@ func ServeIndexPage(fs stuffbin.FileSystem) http.HandlerFunc {
 			return
 		}
 
-    // prevent page caching in order to get latest content
-    r.Header.Add("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0")
-    r.Header.Add("Pragma", "no-cache")
-    r.Header.Add("Expires", "-1")
+		// prevent page caching in order to get latest content
+		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "-1")
+    w.Header().Set("Content-Type", "text/html")
 
-		file, err := fs.Get(path.Join(FrontendDir, "index.html"))
+		file, err := fs.Get(filepath.Join(FrontendDir, "index.html"))
+
 		if err != nil {
 			colorlog.Error("error at fs.Get: %v", err)
 			http.Error(w, "page not found", http.StatusNotFound)
 			return
 		}
 
-		r.Header.Set("Content-Type", "text/html")
-		if _, err := w.Write(file.ReadBytes()); err != nil {
-			colorlog.Error("failed to write file bytes in response")
-		}
+    http.ServeContent(w, r, "index.html", time.Now(), file)
 	}
 }
