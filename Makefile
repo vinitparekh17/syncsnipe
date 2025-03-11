@@ -15,7 +15,7 @@ VERSION ?= $(shell grep -m1 '^v[0-9]+\.[0-9]+\.[0-9]+' VERSION 2>/dev/null || ec
 BUILDSTR := $(VERSION) (\#$(LAST_COMMIT) $(shell date -u +"%FT%T%Z"))
 
 .DEFAULT_GOAL := build
-.PHONY: help install-deps build-frontend build-backend run-frontend run-backend build stuff format lint check-golangci-lint generate-sqlc push frontend-lint backend-lint format-frontend format-backend
+.PHONY: help install-deps build-frontend build-backend run-frontend run-backend build stuff format lint check-golangci-lint generate-sqlc push frontend-lint backend-lint format-frontend format-backend clean-frontend clean-db clean-binary clean-all
 
 ##@ HELP & UTILS
 
@@ -84,7 +84,7 @@ build: build-frontend build-backend stuff ## Build both frontend and backend, th
 	@echo "→ Build complete, you legend."
 
 stuff: $(STUFFBIN) ## Bundle static assets into binary using stuffbin
-	@$(STUFFBIN) -a stuff -in $(BIN) -out $(BIN) $(FRONTEND_DIST) $(SCHEMA_DIR)
+	@$(STUFFBIN) -a stuff -in $(BIN) -out $(BIN) $(STATIC)
 
 ##@ FORMATTING & LINTING & AUDITING
 
@@ -106,8 +106,29 @@ audit: ## Run various code audits for security and best practices
 	@echo "→ Running tests with race detection..."
 	@go test -race -buildvcs -vet=off ./...
 
+##@ Clean Up
+
+clean-frontend: ## Remove SvelteKit build and cache files
+	@cd frontend && rm -rf build .svelte-kit || true
+
+clean-db: ## Remove SQLite3 database and temporary files
+	@rm -f syncsnipe.db syncsnipe.db-shm syncsnipe.db-wal
+
+clean-binary: ## Remove the compiled Go binary
+	@rm -f syncsnipe
+
+clean-all: clean-frontend clean-db clean-binary ## Remove all generated artifacts
+	@echo "→ Cleanup completed." 
 
 ##@ GIT ACTIONS
 
+
 push: format lint ## Lint, format, and push code to Git
-	@git push origin main
+	@git diff --quiet || ( \
+		echo "🚀 Formatting & Linting..."; \
+		git add .; \
+		git commit -m "🚀 Auto-format & lint: $(shell date +'%Y-%m-%d %H:%M:%S')"; \
+		git branch --show-current | xargs -I {} git push origin {} \
+	)
+	@echo "→ Code formatted, linted, committed, and pushed."
+
