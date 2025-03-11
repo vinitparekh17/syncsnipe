@@ -10,11 +10,19 @@ import (
 	"github.com/vinitparekh17/syncsnipe/internal/sync"
 )
 
+const DefaultPort = "8000"
+
 var rootCmd = &cobra.Command{Use: "syncsnipe"}
 var schemaFile = filepath.Join("sql", "schema.sql")
 
-func Execute() {
+var app *core.App
+var webCmd = NewWebCmd(app)
 
+func init() {
+	webCmd.PersistentFlags().StringVarP(&Port, "port", "p", DefaultPort, "choose port for web server")
+}
+
+func Execute() {
 	db := database.GetDatabase()
 
 	watcher, err := sync.NewSyncWatcher()
@@ -35,13 +43,12 @@ func Execute() {
 
 	dbTx := database.New(db)
 
-	syncSnipeApp := &core.App{
+	app = &core.App{
 		DBQuery: dbTx,
 		Watcher: watcher,
 	}
-
-	rootCmd.AddCommand(NewWebCmd(syncSnipeApp))
-	rootCmd.AddCommand(NewCliCmd(syncSnipeApp))
+	rootCmd.AddCommand(webCmd)
+	rootCmd.AddCommand(NewCliCmd(app))
 	if err := rootCmd.Execute(); err != nil {
 		colorlog.Fetal("enable to exec root command: %v", err)
 	}

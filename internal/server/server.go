@@ -6,11 +6,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
 	"github.com/vinitparekh17/syncsnipe/internal/core"
+	"github.com/vinitparekh17/syncsnipe/internal/handler"
+	"github.com/vinitparekh17/syncsnipe/internal/stuffbin"
 )
 
 type SyncServer struct {
@@ -18,11 +21,16 @@ type SyncServer struct {
 	Mux    *http.ServeMux
 }
 
-func NewServer(app *core.App) *SyncServer {
+func NewServer(app *core.App, port string) *SyncServer {
 	mux := NewMuxRouter()
+	portNum, err := strconv.Atoi(port)
+	if err != nil || portNum < 1 || portNum > 65535 {
+		portNum = 8000
+	}
+	addr := fmt.Sprintf(":%d", portNum)
 	return &SyncServer{
 		server: &http.Server{
-			Addr:        ":8080",
+			Addr:        addr,
 			Handler:     mux,
 			ReadTimeout: 5 * time.Second,
 		},
@@ -32,6 +40,8 @@ func NewServer(app *core.App) *SyncServer {
 
 func NewMuxRouter() *http.ServeMux {
 	mux := http.NewServeMux()
+	fs := stuffbin.LoadFile(handler.FrontendDir)
+	mux.HandleFunc("/", handler.ServeIndexPage(fs))
 	return mux
 }
 
@@ -41,7 +51,7 @@ func (s *SyncServer) Run() error {
 
 	errChan := make(chan error, 1)
 	go func() {
-		colorlog.Info("starting web server on port 8000")
+		colorlog.Info("starting web server on port %s", s.server.Addr)
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errChan <- fmt.Errorf("server error while listening: %v", err)
 		}
