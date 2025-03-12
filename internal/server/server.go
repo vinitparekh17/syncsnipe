@@ -4,11 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
 	"path/filepath"
 	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
@@ -47,11 +44,9 @@ func NewMuxRouter() *http.ServeMux {
 	return mux
 }
 
-func (s *SyncServer) Run() error {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
+func (s *SyncServer) Run(shutDownChan <-chan struct{}) error {
 	errChan := make(chan error, 1)
+
 	go func() {
 		colorlog.Info("starting web server on port %s", s.server.Addr)
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -60,17 +55,12 @@ func (s *SyncServer) Run() error {
 	}()
 
 	select {
-	case <-ctx.Done():
-		colorlog.Info("shutting down the server")
+	case <-shutDownChan:
+		colorlog.Info("shutting down web server")
 		shutDownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		return s.ShutDown(shutDownCtx)
+		return s.server.Shutdown(shutDownCtx)
 	case err := <-errChan:
 		return err
 	}
-}
-
-func (s *SyncServer) ShutDown(ctx context.Context) error {
-	return s.server.Shutdown(ctx)
-	// more clean up task will go here
 }

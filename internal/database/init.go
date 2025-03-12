@@ -26,7 +26,7 @@ func GetDatabase() *DB {
 func (db *DB) LoadSchema(filePath string) error {
 	fs := stuffbin.LoadFile(filePath)
 
-	if !tableExists(db, "file") {
+	if !tableExists(db, "files") {
 		file, err := fs.Get(filePath)
 		if err != nil {
 			colorlog.Error("error getting schema.sql: %v", err)
@@ -35,9 +35,9 @@ func (db *DB) LoadSchema(filePath string) error {
 
 		_, err = db.Exec(string(file.ReadBytes()))
 		return err
-	} else {
-		return nil
 	}
+  colorlog.Info("schema already loaded, skipping")
+	return nil
 }
 
 func tableExists(db *DB, tableName string) bool {

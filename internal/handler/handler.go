@@ -30,7 +30,7 @@ func ServeIndexPage(fs stuffbin.FileSystem) http.HandlerFunc {
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0")
 		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "-1")
-    w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Content-Type", "text/html")
 
 		file, err := fs.Get(filepath.Join(FrontendDir, "index.html"))
 
@@ -40,6 +40,6 @@ func ServeIndexPage(fs stuffbin.FileSystem) http.HandlerFunc {
 			return
 		}
 
-    http.ServeContent(w, r, "index.html", time.Now(), file)
+		http.ServeContent(w, r, "index.html", time.Now(), file)
 	}
 }

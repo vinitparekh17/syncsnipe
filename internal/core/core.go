@@ -6,7 +6,8 @@ import (
 )
 
 type App struct {
-	DBQuery *database.Queries
-	Watcher *sync.SyncWatcher
-	Worker  *sync.SyncWorker
+	DBQuery      *database.Queries
+	Watcher      *sync.SyncWatcher
+	Worker       *sync.SyncWorker
+	ShutdownChan chan struct{}
 }

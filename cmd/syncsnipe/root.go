@@ -1,13 +1,17 @@
 package syncsnipe
 
 import (
+	"os"
+	"os/signal"
 	"path/filepath"
+	"sync"
+	"syscall"
 
 	"github.com/spf13/cobra"
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
 	"github.com/vinitparekh17/syncsnipe/internal/core"
 	"github.com/vinitparekh17/syncsnipe/internal/database"
-	"github.com/vinitparekh17/syncsnipe/internal/sync"
+	s "github.com/vinitparekh17/syncsnipe/internal/sync"
 )
 
 const DefaultPort = "8000"
@@ -15,22 +19,24 @@ const DefaultPort = "8000"
 var rootCmd = &cobra.Command{Use: "syncsnipe"}
 var schemaFile = filepath.Join("sql", "schema.sql")
 
-var app *core.App
-var webCmd = NewWebCmd(app)
-
-func init() {
-	webCmd.PersistentFlags().StringVarP(&Port, "port", "p", DefaultPort, "choose port for web server")
-}
-
 func Execute() {
+	var wg sync.WaitGroup
+	shutdownChan := make(chan struct{})
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
 	db := database.GetDatabase()
 
-	watcher, err := sync.NewSyncWatcher()
+	watcher, err := s.NewSyncWatcher()
 	if err != nil {
 		colorlog.Fetal("unable to start watcher: %v", err)
 	}
 
-	go watcher.Start()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		watcher.Start()
+	}()
 
 	if err := db.Ping(); err != nil {
 		colorlog.Fetal("error while pinging db: %v", err)
@@ -43,13 +49,39 @@ func Execute() {
 
 	dbTx := database.New(db)
 
-	app = &core.App{
-		DBQuery: dbTx,
-		Watcher: watcher,
+	app := &core.App{
+		DBQuery:      dbTx,
+		Watcher:      watcher,
+		ShutdownChan: shutdownChan,
 	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		<-sigChan
+		colorlog.Info("shutdown signal received")
+		close(shutdownChan)
+
+		if err := watcher.Close(); err != nil {
+			colorlog.Fetal("err closing watcher: %v", err)
+		}
+
+		if err := db.Close(); err != nil {
+			colorlog.Fetal("err closing sqlite3: %v", err)
+		}
+
+		colorlog.Success("gracefull shutdown completed.")
+
+	}()
+
+	webCmd := NewWebCmd(app)
+	webCmd.PersistentFlags().StringVarP(&port, "port", "p", DefaultPort, "choose port for web server")
+
 	rootCmd.AddCommand(webCmd)
 	rootCmd.AddCommand(NewCliCmd(app))
 	if err := rootCmd.Execute(); err != nil {
-		colorlog.Fetal("enable to exec root command: %v", err)
+		colorlog.Fetal("unable to exec root command: %v", err)
 	}
+	wg.Wait()
 }
