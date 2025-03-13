@@ -27,17 +27,6 @@ func Execute() {
 
 	db := database.GetDatabase()
 
-	watcher, err := s.NewSyncWatcher()
-	if err != nil {
-		colorlog.Fetal("unable to start watcher: %v", err)
-	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		watcher.Start()
-	}()
-
 	if err := db.Ping(); err != nil {
 		colorlog.Fetal("error while pinging db: %v", err)
 	} else {
@@ -49,11 +38,22 @@ func Execute() {
 
 	dbTx := database.New(db)
 
+	watcher, err := s.NewSyncWatcher(dbTx)
+	if err != nil {
+		colorlog.Fetal("unable to start watcher: %v", err)
+	}
+
 	app := &core.App{
-		DBQuery:      dbTx,
+		DB:           dbTx,
 		Watcher:      watcher,
 		ShutdownChan: shutdownChan,
 	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		watcher.Start()
+	}()
 
 	wg.Add(1)
 	go func() {
@@ -63,16 +63,13 @@ func Execute() {
 		colorlog.Info("shutdown signal received")
 		close(shutdownChan)
 
-		if err := watcher.Close(); err != nil {
-			colorlog.Fetal("err closing watcher: %v", err)
-		}
+		watcher.Close()
 
 		if err := db.Close(); err != nil {
 			colorlog.Fetal("err closing sqlite3: %v", err)
 		}
 
 		colorlog.Success("gracefull shutdown completed.")
-
 	}()
 
 	webCmd := NewWebCmd(app)
