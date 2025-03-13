@@ -7,7 +7,17 @@ RETURNING id;
 -- name: GetProfile :one
 SELECT *
   FROM profiles
-  WHERE id = ?; 
+  WHERE id = ?;
+
+-- name: IsProfileExists :one
+SELECT COUNT(*) 
+  FROM profiles 
+  WHERE LOWER(name) = LOWER(?);
+
+-- name: GetProfileByName :one
+SELECT *
+  FROM profiles
+  WHERE name = ?;
 
 -- name: ListProfiles :many
 SELECT *
@@ -33,6 +43,12 @@ RETURNING id;
 SELECT *
   FROM sync_rules
   WHERE id = ?;
+
+-- name: GetProfileIDBySourceDir :one
+SELECT profile_id
+  FROM sync_rules
+  WHERE source_dir = ? AND enabled = 1
+  LIMIT 1;
 
 -- name: ListSyncRules :many
 SELECT *

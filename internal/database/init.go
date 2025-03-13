@@ -36,7 +36,7 @@ func (db *DB) LoadSchema(filePath string) error {
 		_, err = db.Exec(string(file.ReadBytes()))
 		return err
 	}
-  colorlog.Info("schema already loaded, skipping")
+	colorlog.Info("schema already loaded, skipping")
 	return nil
 }
 

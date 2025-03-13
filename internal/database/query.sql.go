@@ -219,6 +219,33 @@ func (q *Queries) GetProfile(ctx context.Context, id int64) (Profile, error) {
 	return i, err
 }
 
+const getProfileByName = `-- name: GetProfileByName :one
+SELECT id, name, created_at
+  FROM profiles
+  WHERE name = ?
+`
+
+func (q *Queries) GetProfileByName(ctx context.Context, name string) (Profile, error) {
+	row := q.db.QueryRowContext(ctx, getProfileByName, name)
+	var i Profile
+	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
+	return i, err
+}
+
+const getProfileIDBySourceDir = `-- name: GetProfileIDBySourceDir :one
+SELECT profile_id
+  FROM sync_rules
+  WHERE source_dir = ? AND enabled = 1
+  LIMIT 1
+`
+
+func (q *Queries) GetProfileIDBySourceDir(ctx context.Context, sourceDir string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getProfileIDBySourceDir, sourceDir)
+	var profile_id int64
+	err := row.Scan(&profile_id)
+	return profile_id, err
+}
+
 const getSyncRule = `-- name: GetSyncRule :one
 SELECT id, profile_id, source_dir, target_dir, enabled, last_run, last_run_successful, created_at, updated_at
   FROM sync_rules
@@ -240,6 +267,19 @@ func (q *Queries) GetSyncRule(ctx context.Context, id int64) (SyncRule, error) {
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const isProfileExists = `-- name: IsProfileExists :one
+SELECT COUNT(*) 
+  FROM profiles 
+  WHERE LOWER(name) = LOWER(?)
+`
+
+func (q *Queries) IsProfileExists(ctx context.Context, lower string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, isProfileExists, lower)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const listFiles = `-- name: ListFiles :many
