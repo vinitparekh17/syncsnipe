@@ -49,6 +49,8 @@ func AddProfile(app *App, profileName string) error {
 }
 
 // TODO: additional validation panding, dir specific
+
+// AddSyncRule inserts sync rule records after input sanitization
 func AddSyncRule(app *App, profileName, sourceDir, targetDir string) error {
 	if sourceDir == targetDir {
 		return errors.New("source directory and target directory must be different")

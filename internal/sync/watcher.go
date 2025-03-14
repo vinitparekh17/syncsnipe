@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -99,7 +98,7 @@ func (sw *SyncWatcher) handleEvent(event fsnotify.Event) {
 	switch {
 	case event.Op&fsnotify.Create == fsnotify.Create || event.Op&fsnotify.Write == fsnotify.Write:
 		op.operation = "create_or_modify"
-  // TODO: create hash 
+		// TODO: create hash
 	case event.Op&fsnotify.Remove == fsnotify.Remove:
 		op.operation = "remove"
 	case event.Op&fsnotify.Rename == fsnotify.Rename:

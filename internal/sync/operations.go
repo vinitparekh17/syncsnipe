@@ -46,4 +46,3 @@ func (s *SyncWorker) Start() {
 // TODO: Complete the logic, must support all file events
 func (s *SyncWorker) processOperation(op *SyncOperation) {
 }
-
