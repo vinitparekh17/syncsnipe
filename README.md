@@ -1,8 +1,7 @@
 # SyncSnipe
 
-A local-first file synchronization and backup tool.
-
-## What is SyncSnipe?
+[![Go Report Card](https://goreportcard.com/badge/github.com/vinitparekh17/syncsnipe)](https://goreportcard.com/report/github.com/vinitparekh17/syncsnipe)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 SyncSnipe is a single-binary Go application that keeps your files in sync across directories without cloud dependencies. It watches for changes in real-time, syncs them locally, and aims for simplicity, reliability, and user control—all from your machine.
 
