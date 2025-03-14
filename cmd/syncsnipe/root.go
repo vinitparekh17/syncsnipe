@@ -69,7 +69,7 @@ func Execute() {
 			colorlog.Fetal("err closing sqlite3: %v", err)
 		}
 
-		colorlog.Success("gracefull shutdown completed.")
+		colorlog.Success("graceful shutdown completed.")
 	}()
 
 	webCmd := NewWebCmd(app)
