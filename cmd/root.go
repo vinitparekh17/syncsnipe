@@ -1,4 +1,4 @@
-package syncsnipe
+package cmd
 
 import (
 	"os"

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/vinitparekh17/syncsnipe/cmd/syncsnipe"
+	"github.com/vinitparekh17/syncsnipe/cmd"
 )
 
 func main() {
-	syncsnipe.Execute()
+	cmd.Execute()
 }
