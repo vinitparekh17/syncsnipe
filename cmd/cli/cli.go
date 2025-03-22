@@ -1,29 +1,21 @@
-package cmd
+package cli
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/vinitparekh17/syncsnipe/internal/cli"
+	"github.com/vinitparekh17/syncsnipe/cmd/cli/profile"
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
-	"github.com/vinitparekh17/syncsnipe/internal/core"
+	"github.com/vinitparekh17/syncsnipe/internal/database"
 )
 
-func NewCliCmd(app *core.App) *cobra.Command {
+func NewCliCmd(q *database.Queries) *cobra.Command {
 	cliCmd := &cobra.Command{
 		Use:   "cli",
 		Short: "run commandline interface",
 	}
-	cliCmd.AddCommand(syncCmd)
+	cliCmd.AddCommand(profile.NewProfileCmd(q))
 	cliCmd.AddCommand(backupCmd)
 
 	return cliCmd
-}
-
-var syncCmd = &cobra.Command{
-	Use:   "sync",
-	Short: "synchronize files with backup",
-	Run: func(cmd *cobra.Command, args []string) {
-		cli.SyncDirs(args)
-	},
 }
 
 var backupCmd = &cobra.Command{

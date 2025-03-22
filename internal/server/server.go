@@ -19,7 +19,7 @@ type SyncServer struct {
 	Mux    *http.ServeMux
 }
 
-func NewServer(app *core.App, port string) *SyncServer {
+func NewServer(app *core.SyncEngine, port string) *SyncServer {
 	mux := NewMuxRouter()
 	portNum, err := strconv.Atoi(port)
 	if err != nil || portNum < 1 || portNum > 65535 {

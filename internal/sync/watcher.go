@@ -77,7 +77,7 @@ func (sw *SyncWatcher) Start() {
 				if !ok {
 					return
 				}
-				colorlog.Fetal("watcher err in event loop: %v", err)
+				colorlog.Fatal("watcher err in event loop: %v", err)
 			}
 		}
 	}()
@@ -160,6 +160,10 @@ func (sw *SyncWatcher) loadIgnoreList() error {
 		petterns, err := sw.db.ListIgnorePattern(context.Background(), profile.ID)
 		if err != nil {
 			return err
+		}
+
+		if len(petterns) == 0 {
+			continue
 		}
 
 		list := make([]string, len(petterns))

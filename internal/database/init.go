@@ -17,7 +17,7 @@ type DB struct {
 func GetDatabase() *DB {
 	db, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
-		colorlog.Fetal("failed to open db connection: %v", err)
+		colorlog.Fatal("failed to open db connection: %v", err)
 	}
 
 	return &DB{db}
