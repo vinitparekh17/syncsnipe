@@ -48,16 +48,21 @@ func AddProfile(q *database.Queries, profileName string) error {
 	return err
 }
 
-func GetProfiles(q *database.Queries) ([]string, error) {
-	profiles, err := q.ListProfiles(context.Background())
-	if err != nil {
-		return nil, err
+func GetProfiles(q *database.Queries) ([]database.Profile, error) {
+	return q.ListProfiles(context.Background())
+}
+
+func UpdateProfile(q *database.Queries, oldName string, newName string) error {
+	if err := validateProfileName(q, newName); err != nil {
+		return err
 	}
 
-	var profileNames []string
-	for _, profile := range profiles {
-		profileNames = append(profileNames, profile.Name)
-	}
+	return q.UpdateProfileByName(context.Background(), database.UpdateProfileByNameParams{
+		Name:   newName,
+		Name_2: oldName,
+	})
+}
 
-	return profileNames, nil
+func DeleteProfile(q *database.Queries, profileName string) error {
+	return q.DeleteProfileByName(context.Background(), profileName)
 }

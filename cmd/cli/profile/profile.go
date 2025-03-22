@@ -12,6 +12,9 @@ func NewProfileCmd(q *database.Queries) *cobra.Command {
 	}
 
 	profileCmd.AddCommand(NewAddCmd(q))
+	profileCmd.AddCommand(NewListCmd(q))
+	profileCmd.AddCommand(NewDeleteCmd(q))
+	profileCmd.AddCommand(NewUpdateCmd(q))
 
 	return profileCmd
 }

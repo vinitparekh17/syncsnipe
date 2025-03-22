@@ -24,14 +24,23 @@ SELECT *
   FROM profiles
   ORDER BY created_at ASC;
 
--- name: UpdateProfile :exec
+-- name: UpdateProfileByID :exec
 UPDATE profiles
   SET name = ?, updated_at = strftime('%s', 'now')
   WHERE id = ?;
 
--- name: DeleteProfile :exec
+-- name: UpdateProfileByName :exec
+UPDATE profiles
+  SET name = ?, updated_at = strftime('%s', 'now')
+  WHERE name = ?;
+
+-- name: DeleteProfileByID :exec
 DELETE FROM profiles 
   WHERE id = ?;
+
+-- name: DeleteProfileByName :exec
+DELETE FROM profiles 
+  WHERE name = ?;
 
 -- name: AddSyncRule :one
 INSERT INTO sync_rules (

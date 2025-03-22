@@ -118,13 +118,23 @@ func (q *Queries) DeleteFile(ctx context.Context, arg DeleteFileParams) error {
 	return err
 }
 
-const deleteProfile = `-- name: DeleteProfile :exec
+const deleteProfileByID = `-- name: DeleteProfileByID :exec
 DELETE FROM profiles 
   WHERE id = ?
 `
 
-func (q *Queries) DeleteProfile(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteProfile, id)
+func (q *Queries) DeleteProfileByID(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteProfileByID, id)
+	return err
+}
+
+const deleteProfileByName = `-- name: DeleteProfileByName :exec
+DELETE FROM profiles 
+  WHERE name = ?
+`
+
+func (q *Queries) DeleteProfileByName(ctx context.Context, name string) error {
+	_, err := q.db.ExecContext(ctx, deleteProfileByName, name)
 	return err
 }
 
@@ -207,7 +217,7 @@ func (q *Queries) GetIgnorePattern(ctx context.Context, id int64) (IgnorePattern
 }
 
 const getProfile = `-- name: GetProfile :one
-SELECT id, name, created_at
+SELECT id, name, created_at, updated_at
   FROM profiles
   WHERE id = ?
 `
@@ -215,12 +225,17 @@ SELECT id, name, created_at
 func (q *Queries) GetProfile(ctx context.Context, id int64) (Profile, error) {
 	row := q.db.QueryRowContext(ctx, getProfile, id)
 	var i Profile
-	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }
 
 const getProfileByName = `-- name: GetProfileByName :one
-SELECT id, name, created_at
+SELECT id, name, created_at, updated_at
   FROM profiles
   WHERE name = ?
 `
@@ -228,7 +243,12 @@ SELECT id, name, created_at
 func (q *Queries) GetProfileByName(ctx context.Context, name string) (Profile, error) {
 	row := q.db.QueryRowContext(ctx, getProfileByName, name)
 	var i Profile
-	err := row.Scan(&i.ID, &i.Name, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }
 
@@ -355,7 +375,7 @@ func (q *Queries) ListIgnorePattern(ctx context.Context, profileID int64) ([]Ign
 }
 
 const listProfiles = `-- name: ListProfiles :many
-SELECT id, name, created_at
+SELECT id, name, created_at, updated_at
   FROM profiles
   ORDER BY created_at ASC
 `
@@ -369,7 +389,12 @@ func (q *Queries) ListProfiles(ctx context.Context) ([]Profile, error) {
 	var items []Profile
 	for rows.Next() {
 		var i Profile
-		if err := rows.Scan(&i.ID, &i.Name, &i.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -492,19 +517,35 @@ func (q *Queries) ResolveConflict(ctx context.Context, arg ResolveConflictParams
 	return err
 }
 
-const updateProfile = `-- name: UpdateProfile :exec
+const updateProfileByID = `-- name: UpdateProfileByID :exec
 UPDATE profiles
   SET name = ?, updated_at = strftime('%s', 'now')
   WHERE id = ?
 `
 
-type UpdateProfileParams struct {
+type UpdateProfileByIDParams struct {
 	Name string `json:"name"`
 	ID   int64  `json:"id"`
 }
 
-func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) error {
-	_, err := q.db.ExecContext(ctx, updateProfile, arg.Name, arg.ID)
+func (q *Queries) UpdateProfileByID(ctx context.Context, arg UpdateProfileByIDParams) error {
+	_, err := q.db.ExecContext(ctx, updateProfileByID, arg.Name, arg.ID)
+	return err
+}
+
+const updateProfileByName = `-- name: UpdateProfileByName :exec
+UPDATE profiles
+  SET name = ?, updated_at = strftime('%s', 'now')
+  WHERE name = ?
+`
+
+type UpdateProfileByNameParams struct {
+	Name   string `json:"name"`
+	Name_2 string `json:"name_2"`
+}
+
+func (q *Queries) UpdateProfileByName(ctx context.Context, arg UpdateProfileByNameParams) error {
+	_, err := q.db.ExecContext(ctx, updateProfileByName, arg.Name, arg.Name_2)
 	return err
 }
 

@@ -39,9 +39,10 @@ type IgnorePattern struct {
 }
 
 type Profile struct {
-	ID        int64         `json:"id"`
-	Name      string        `json:"name"`
-	CreatedAt sql.NullInt64 `json:"created_at"`
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	CreatedAt int64  `json:"created_at"`
+	UpdatedAt int64  `json:"updated_at"`
 }
 
 type SyncRule struct {
