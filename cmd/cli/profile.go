@@ -16,7 +16,6 @@ func NewProfileCmd(profileService profile.ProfileService) *cobra.Command {
 			RunE:  run,
 		}
 	}
-	// ... (createCmd helper function remains the same) ...
 
 	addProfileCmd := createCmd(
 		"add [profile-name]",

@@ -1,0 +1,61 @@
+name: syncsnipe-test-suite
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "**.txt"
+      - "**.json"
+      - "**.yaml"
+      - "**.yml"
+      - "LICENSE"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "**.txt"
+      - "**.json"
+      - "**.yaml"
+      - "**.yml"
+      - "LICENSE"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.x"
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('go.sum') }}
+          restore-keys: ${{ runner.os }}-go-
+      - uses: dorny/paths-filter@v3
+        id: file_types
+        with:
+          filters: |
+            watch_file_changes:
+              - '**/*.go'
+              - 'go.mod'
+              - 'go.sum'
+      - name: Install dependencies
+        if: steps.file_types.outputs.watch_file_changes == 'true'
+        run: go mod tidy -v
+      - name: Run tests
+        if: steps.file_types.outputs.watch_file_changes == 'true'
+        run: go test -v -coverprofile=coverage.out ./...
+      - name: Generate coverage report
+        if: steps.file_types.outputs.watch_file_changes == 'true'
+        run: go tool cover -html=coverage.out -o coverage.html
+      - uses: actions/upload-artifact@v4
+        if: steps.file_types.outputs.watch_file_changes == 'true'
+        with:
+          name: coverage-report
+          path: coverage.html

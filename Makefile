@@ -15,7 +15,7 @@ VERSION ?= $(shell grep -m1 '^v[0-9]+\.[0-9]+\.[0-9]+' VERSION 2>/dev/null || ec
 BUILDSTR := $(VERSION) (\#$(LAST_COMMIT) $(shell date -u +"%FT%T%Z"))
 
 .DEFAULT_GOAL := build
-.PHONY: help install-deps build-frontend build-backend run-frontend run-backend build stuff format lint check-golangci-lint generate-sqlc push frontend-lint backend-lint format-frontend format-backend clean-frontend clean-db clean-binary clean-all
+.PHONY: help install-deps build-frontend run-frontend lint-frontend test-frontend format-frontend build-backend run-backend lint-backend test-backend format-backend generate-sqlc build stuff format lint test audit clean-frontend clean-db clean-binary clean-all push
 
 ##@ HELP & UTILS
 
@@ -52,8 +52,11 @@ build-frontend: install-deps ## Build the frontend for production
 run-frontend: ## Run the frontend development server
 	@cd $(FRONTEND_DIR) && VITE_APP_VERSION="$(VERSION)" pnpm dev
 
-frontend-lint: ## Runs eslint for frontend 
+lint-frontend: ## Runs eslint for frontend 
 	@cd $(FRONTEND_DIR) && pnpm lint || { echo "Frontend linting failed"; exit 1; }
+
+test-frontend: ## Run frontend tests
+	@cd $(FRONTEND_DIR) && pnpm test
 
 format-frontend: ## Format frontend code
 	@cd $(FRONTEND_DIR) && pnpm format
@@ -66,8 +69,11 @@ build-backend: $(STUFFBIN) ## Build the backend binary
 run-backend: ## Run the Go backend server in development mode
 	@CGO_ENABLED=0 go run -ldflags="-s -w" main.go
 
-backend-lint: check-golangci-lint ## Runs golangci-lint for backend
+lint-backend: check-golangci-lint ## Runs golangci-lint for backend
 	@golangci-lint run ./... || { echo "Backend linting failed"; exit 1; }
+
+test-backend: ## Run backend tests
+	@go test -race -cover -v ./test/...
 
 format-backend: ## Format backend code
 	@go fmt ./...
@@ -86,13 +92,16 @@ build: build-frontend build-backend stuff ## Build both frontend and backend, th
 stuff: $(STUFFBIN) ## Bundle static assets into binary using stuffbin
 	@$(STUFFBIN) -a stuff -in $(BIN) -out $(BIN) $(STATIC)
 
-##@ FORMATTING & LINTING & AUDITING
+##@ FORMATTING & LINTING & TESTING & AUDITING
 
 format: format-frontend format-backend ## Format entire workspace
 	@echo "→ Formatting complete."
 
-lint: frontend-lint backend-lint ## Run linting for both frontend and backend
+lint: lint-frontend lint-backend ## Run linting for both frontend and backend
 	@echo "→ Linting complete."
+
+test: test-frontend test-backend ## Run tests for backend
+	@echo "→ Testing complete."
 
 audit: ## Run various code audits for security and best practices
 	@echo "→ Running Go module verification..."
