@@ -1,6 +1,7 @@
 package stuffbin
 
 import (
+	"log"
 	"os"
 
 	"github.com/knadh/stuffbin"
@@ -13,7 +14,7 @@ import (
 func LoadFile(filePath string) stuffbin.FileSystem {
 	path, err := os.Executable() // get self executable path
 	if err != nil {
-		colorlog.Fatal("error while getting self executable path: %v", err)
+		log.Fatalf("error while getting self executable path: %v", err)
 	}
 
 	fs, err := stuffbin.UnStuff(path)
@@ -23,10 +24,10 @@ func LoadFile(filePath string) stuffbin.FileSystem {
 
 			fs, err = stuffbin.NewLocalFS("/", filePath)
 			if err != nil {
-				colorlog.Fatal("error initializing local file system: %v", err)
+				log.Fatalf("error initializing local file system: %v", err)
 			}
 		} else {
-			colorlog.Fatal("unable to unstuff %s path err: %v", filePath, err)
+			log.Fatalf("unable to unstuff %s path err: %v", filePath, err)
 		}
 	}
 	return fs

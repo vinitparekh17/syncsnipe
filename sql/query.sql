@@ -29,7 +29,7 @@ UPDATE profiles
   SET name = ?, updated_at = strftime('%s', 'now')
   WHERE id = ?;
 
--- name: UpdateProfileByName :exec
+-- name: UpdateProfileByName :execrows
 UPDATE profiles
   SET name = ?, updated_at = strftime('%s', 'now')
   WHERE name = ?;
@@ -38,7 +38,7 @@ UPDATE profiles
 DELETE FROM profiles 
   WHERE id = ?;
 
--- name: DeleteProfileByName :exec
+-- name: DeleteProfileByName :execrows
 DELETE FROM profiles 
   WHERE name = ?;
 

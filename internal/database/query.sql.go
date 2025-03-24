@@ -128,14 +128,17 @@ func (q *Queries) DeleteProfileByID(ctx context.Context, id int64) error {
 	return err
 }
 
-const deleteProfileByName = `-- name: DeleteProfileByName :exec
+const deleteProfileByName = `-- name: DeleteProfileByName :execrows
 DELETE FROM profiles 
   WHERE name = ?
 `
 
-func (q *Queries) DeleteProfileByName(ctx context.Context, name string) error {
-	_, err := q.db.ExecContext(ctx, deleteProfileByName, name)
-	return err
+func (q *Queries) DeleteProfileByName(ctx context.Context, name string) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteProfileByName, name)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteSyncRule = `-- name: DeleteSyncRule :exec
@@ -533,7 +536,7 @@ func (q *Queries) UpdateProfileByID(ctx context.Context, arg UpdateProfileByIDPa
 	return err
 }
 
-const updateProfileByName = `-- name: UpdateProfileByName :exec
+const updateProfileByName = `-- name: UpdateProfileByName :execrows
 UPDATE profiles
   SET name = ?, updated_at = strftime('%s', 'now')
   WHERE name = ?
@@ -544,9 +547,12 @@ type UpdateProfileByNameParams struct {
 	Name_2 string `json:"name_2"`
 }
 
-func (q *Queries) UpdateProfileByName(ctx context.Context, arg UpdateProfileByNameParams) error {
-	_, err := q.db.ExecContext(ctx, updateProfileByName, arg.Name, arg.Name_2)
-	return err
+func (q *Queries) UpdateProfileByName(ctx context.Context, arg UpdateProfileByNameParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, updateProfileByName, arg.Name, arg.Name_2)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const updateSyncRule = `-- name: UpdateSyncRule :exec

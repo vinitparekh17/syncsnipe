@@ -1,6 +1,7 @@
 package colorlog
 
 import (
+	"fmt"
 	"log"
 	"os"
 )
@@ -29,16 +30,13 @@ func Error(format string, v ...any) {
 	log.Printf(ANSIColourRed+" "+format+ANSIReset, v...)
 }
 
-// Fatal logs the message and exits the program with status code 1
-// Intended use of this function is limited to the main package and CLI commands to show user feedback on error
-// avoid using this function in internal packages; just return the error as much as possible
-func Fatal(format string, v ...any) {
-	log.Fatalf(ANSIColourRed+" "+format+ANSIReset, v...)
-}
-
-// Complete logs the message and exits the program with status code 0
-// Intended use of this function is limited to cli commands to show user feedback on successful completion
+// Complete logs a success message in green and exits with 0 in CLI mode; no exit in test mode.
 func Complete(format string, v ...any) {
-	Success(format, v...)
-	os.Exit(0)
+	msg := fmt.Sprintf(format, v...)
+	fullMsg := ANSIColourGreen + " " + msg + ANSIReset
+	if os.Getenv("TESTING") == "" {
+		log.Print(fullMsg)
+		os.Exit(0)
+	}
+	log.Print(msg) // Just log in test mode
 }

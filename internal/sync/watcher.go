@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"log"
 	"path/filepath"
 	"sync"
 	"time"
@@ -77,7 +78,7 @@ func (sw *SyncWatcher) Start() {
 				if !ok {
 					return
 				}
-				colorlog.Fatal("watcher err in event loop: %v", err)
+				log.Fatalf("watcher err in event loop: %v", err)
 			}
 		}
 	}()

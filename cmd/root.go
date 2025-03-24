@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -10,20 +11,23 @@ import (
 	"github.com/vinitparekh17/syncsnipe/internal/database"
 )
 
-const DefaultPort = "8000"
+const (
+	DefaultPort = "8000"
+	dbFile      = "syncsnipe.db"
+)
 
 var rootCmd = &cobra.Command{Use: "syncsnipe"}
 var schemaFile = filepath.Join("sql", "schema.sql")
 
-func Execute() {
-	db := database.GetDatabase()
+func Execute() error {
+	db := database.GetDatabase(dbFile)
 
 	if err := db.Ping(); err != nil {
-		colorlog.Fatal("error pinging db: %w", err)
+		return fmt.Errorf("error pinging db: %w", err)
 	}
 
 	if err := db.LoadSchema(schemaFile); err != nil {
-		colorlog.Fatal("unable to load schema: %w", err)
+		return fmt.Errorf("unable to load schema: %w", err)
 	}
 
 	colorlog.Success("successfully Connected to sqlite")
@@ -31,15 +35,18 @@ func Execute() {
 
 	dbTx := database.New(db)
 
-	webCmd := web.NewWebCmd(dbTx)
+	webCmd, err := web.NewWebCmd(dbTx)
+	if err != nil {
+		return err
+	}
 	webCmd.PersistentFlags().StringVarP(&web.Port, "port", "p", DefaultPort, "choose port for web server")
 	rootCmd.AddCommand(webCmd)
 
 	cliCmd := cli.NewCliCmd(dbTx)
 	rootCmd.AddCommand(cliCmd)
-	rootCmd.AddCommand()
 	if err := rootCmd.Execute(); err != nil {
-		colorlog.Fatal("unable to exec root command: %v", err)
+		return fmt.Errorf("unable to execute root command: %w", err)
 	}
-	// wg.Wait()
+
+	return nil
 }

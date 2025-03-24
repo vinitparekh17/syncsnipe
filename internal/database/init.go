@@ -2,22 +2,21 @@ package database
 
 import (
 	"database/sql"
+	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
 	"github.com/vinitparekh17/syncsnipe/internal/stuffbin"
 )
 
-const dbFile = "syncsnipe.db"
-
 type DB struct {
 	*sql.DB
 }
 
-func GetDatabase() *DB {
+func GetDatabase(dbFile string) *DB {
 	db, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
-		colorlog.Fatal("failed to open db connection: %v", err)
+		log.Fatalf("failed to open db connection: %v", err)
 	}
 
 	return &DB{db}

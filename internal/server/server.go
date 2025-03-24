@@ -40,6 +40,7 @@ func NewMuxRouter() *http.ServeMux {
 	mux := http.NewServeMux()
 	fs := stuffbin.LoadFile(handler.FrontendDir)
 	mux.Handle("/_app/", http.StripPrefix("/_app/", http.FileServer(http.Dir(filepath.Join(handler.FrontendDir, "_app")))))
+	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir(filepath.Join(handler.FrontendDir, "images")))))
 	mux.HandleFunc("/", handler.ServeIndexPage(fs))
 	return mux
 }

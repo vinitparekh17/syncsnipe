@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"sync"
@@ -16,7 +17,7 @@ import (
 
 var Port string
 
-func NewWebCmd(dbTx *database.Queries) *cobra.Command {
+func NewWebCmd(dbTx *database.Queries) (*cobra.Command, error) {
 	var wg sync.WaitGroup
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -24,7 +25,7 @@ func NewWebCmd(dbTx *database.Queries) *cobra.Command {
 	shutdownChan := make(chan struct{})
 	watcher, err := s.NewSyncWatcher(dbTx)
 	if err != nil {
-		colorlog.Fatal("unable to start watcher: %v", err)
+		return nil, fmt.Errorf("unable to start watcher: %v", err)
 	}
 
 	app := &core.SyncEngine{
@@ -61,5 +62,5 @@ func NewWebCmd(dbTx *database.Queries) *cobra.Command {
 				os.Exit(1)
 			}
 		},
-	}
+	}, nil
 }

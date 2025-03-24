@@ -10,7 +10,25 @@ import (
 	"github.com/vinitparekh17/syncsnipe/internal/database"
 )
 
-func validateProfileName(q *database.Queries, profileName string) error {
+// ProfileService interface defines the methods for profile management
+type ProfileService interface {
+	validateProfileName(ctx context.Context, profileName string) error
+	AddProfile(ctx context.Context, profileName string) error
+	GetProfiles(ctx context.Context) ([]database.Profile, error)
+	UpdateProfile(ctx context.Context, oldName string, newName string) error
+	DeleteProfile(ctx context.Context, profileName string) error
+}
+
+// Profile implements the ProfileService interface
+type Profile struct {
+	Queries *database.Queries
+}
+
+func NewProfile(queries *database.Queries) *Profile {
+	return &Profile{Queries: queries}
+}
+
+func (p *Profile) validateProfileName(ctx context.Context, profileName string) error {
 	profileName = strings.TrimSpace(profileName)
 	profileName = regexp.MustCompile(`\s+`).ReplaceAllString(profileName, " ")
 
@@ -27,7 +45,7 @@ func validateProfileName(q *database.Queries, profileName string) error {
 		return errors.New("profile's name can only contain letters, numbers, spaces, dashes (-), and underscores (_)")
 	}
 
-	count, err := q.IsProfileExists(context.Background(), profileName)
+	count, err := p.Queries.IsProfileExists(ctx, profileName)
 	if err != nil {
 		return err
 	}
@@ -39,30 +57,49 @@ func validateProfileName(q *database.Queries, profileName string) error {
 	return nil
 }
 
-func AddProfile(q *database.Queries, profileName string) error {
-	if err := validateProfileName(q, profileName); err != nil {
+func (p *Profile) AddProfile(ctx context.Context, profileName string) error {
+	if err := p.validateProfileName(ctx, profileName); err != nil {
 		return err
 	}
 
-	_, err := q.CreateProfile(context.Background(), profileName)
+	_, err := p.Queries.CreateProfile(ctx, profileName)
 	return err
 }
 
-func GetProfiles(q *database.Queries) ([]database.Profile, error) {
-	return q.ListProfiles(context.Background())
+func (p *Profile) GetProfiles(ctx context.Context) ([]database.Profile, error) {
+	return p.Queries.ListProfiles(ctx)
 }
 
-func UpdateProfile(q *database.Queries, oldName string, newName string) error {
-	if err := validateProfileName(q, newName); err != nil {
+func (p *Profile) UpdateProfile(ctx context.Context, oldName string, newName string) error {
+	if err := p.validateProfileName(ctx, newName); err != nil {
 		return err
 	}
 
-	return q.UpdateProfileByName(context.Background(), database.UpdateProfileByNameParams{
+	row, err := p.Queries.UpdateProfileByName(ctx, database.UpdateProfileByNameParams{
 		Name:   newName,
 		Name_2: oldName,
 	})
+
+	if err != nil {
+		return err
+	}
+
+	if row == 0 {
+		return fmt.Errorf("profile with %s name does not exist", oldName)
+	}
+
+	return nil
 }
 
-func DeleteProfile(q *database.Queries, profileName string) error {
-	return q.DeleteProfileByName(context.Background(), profileName)
+func (p *Profile) DeleteProfile(ctx context.Context, profileName string) error {
+	row, err := p.Queries.DeleteProfileByName(ctx, profileName)
+	if err != nil {
+		return err
+	}
+
+	if row == 0 {
+		return fmt.Errorf("profile with %s name does not exist", profileName)
+	}
+
+	return nil
 }
