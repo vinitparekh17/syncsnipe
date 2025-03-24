@@ -50,7 +50,7 @@ jobs:
         run: go mod tidy -v
       - name: Run tests
         if: steps.file_types.outputs.watch_file_changes == 'true'
-        run: go test -v -coverprofile=coverage.out ./...
+        run: make test
       - name: Generate coverage report
         if: steps.file_types.outputs.watch_file_changes == 'true'
         run: go tool cover -html=coverage.out -o coverage.html

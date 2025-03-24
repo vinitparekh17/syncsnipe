@@ -55,12 +55,16 @@ func NewWebCmd(dbTx *database.Queries) (*cobra.Command, error) {
 	return &cobra.Command{
 		Use:   "web",
 		Short: "run web interface",
-		Run: func(cmd *cobra.Command, args []string) {
-			server := server.NewServer(app, Port)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			server, err := server.NewServer(app, Port)
+			if err != nil {
+				return err
+			}
 			if err := server.Run(app.ShutdownChan); err != nil {
 				colorlog.Error("%v", err)
-				os.Exit(1)
+				return err
 			}
+			return nil
 		},
 	}, nil
 }

@@ -19,8 +19,13 @@ type SyncServer struct {
 	Mux    *http.ServeMux
 }
 
-func NewServer(app *core.SyncEngine, port string) *SyncServer {
-	mux := NewMuxRouter()
+func NewServer(app *core.SyncEngine, port string) (*SyncServer, error) {
+	mux, err := NewMuxRouter()
+	if err != nil {
+		colorlog.Error("error creating mux router: %v", err)
+		return nil, err
+	}
+
 	portNum, err := strconv.Atoi(port)
 	if err != nil || portNum < 1 || portNum > 65535 {
 		portNum = 8000
@@ -33,16 +38,20 @@ func NewServer(app *core.SyncEngine, port string) *SyncServer {
 			ReadTimeout: 5 * time.Second,
 		},
 		Mux: mux,
-	}
+	}, nil
 }
 
-func NewMuxRouter() *http.ServeMux {
+func NewMuxRouter() (*http.ServeMux, error) {
 	mux := http.NewServeMux()
-	fs := stuffbin.LoadFile(handler.FrontendDir)
+	fs, err := stuffbin.LoadFile(handler.FrontendDir)
+	if err != nil {
+		return nil, fmt.Errorf("error loading frontend files: %v", err)
+	}
+
 	mux.Handle("/_app/", http.StripPrefix("/_app/", http.FileServer(http.Dir(filepath.Join(handler.FrontendDir, "_app")))))
 	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir(filepath.Join(handler.FrontendDir, "images")))))
 	mux.HandleFunc("/", handler.ServeIndexPage(fs))
-	return mux
+	return mux, nil
 }
 
 func (s *SyncServer) Run(shutDownChan <-chan struct{}) error {

@@ -1,7 +1,7 @@
 package stuffbin
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/knadh/stuffbin"
@@ -11,10 +11,10 @@ import (
 // TODO: reconsider behaviour to tackle errors rather than log.Fetal
 
 // LoadFile loads the file from linked binary / from local file system at given filePath parameter
-func LoadFile(filePath string) stuffbin.FileSystem {
+func LoadFile(filePath string) (stuffbin.FileSystem, error) {
 	path, err := os.Executable() // get self executable path
 	if err != nil {
-		log.Fatalf("error while getting self executable path: %v", err)
+		return nil, fmt.Errorf("error while getting self executable path: %v", err)
 	}
 
 	fs, err := stuffbin.UnStuff(path)
@@ -24,11 +24,11 @@ func LoadFile(filePath string) stuffbin.FileSystem {
 
 			fs, err = stuffbin.NewLocalFS("/", filePath)
 			if err != nil {
-				log.Fatalf("error initializing local file system: %v", err)
+				return nil, fmt.Errorf("error initializing local file system: %v", err)
 			}
 		} else {
-			log.Fatalf("unable to unstuff %s path err: %v", filePath, err)
+			return nil, fmt.Errorf("unable to unstuff %s path err: %v", filePath, err)
 		}
 	}
-	return fs
+	return fs, nil
 }

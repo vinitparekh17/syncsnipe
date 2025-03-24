@@ -8,13 +8,14 @@ import (
 	"github.com/vinitparekh17/syncsnipe/cmd/cli"
 )
 
-func getCliCmd() *cobra.Command {
-	q := setupTest()
+func getCliCmd(t *testing.T) *cobra.Command {
+	q, err := setupTest(t)
+	assert.NoError(t, err)
 	return cli.NewCliCmd(q)
 }
 
 func TestProfileCommands(t *testing.T) {
-	cliCmd := getCliCmd()
+	cliCmd := getCliCmd(t)
 
 	t.Run("ProfileCmd", func(t *testing.T) {
 		err := executeCommand(cliCmd, "profile")

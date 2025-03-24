@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,20 +22,16 @@ var (
 const mockDBFile = "mock.db"
 
 // Setup function to prepare test environment
-func setupTest() *database.Queries {
+func setupTest(t *testing.T) (*database.Queries, error) {
 	mockDB = database.GetDatabase(mockDBFile)
 
-	if err := mockDB.Ping(); err != nil {
-		log.Fatal("error pinging db: %w", err)
-	}
-
 	if err := mockDB.LoadSchema(schemaFile); err != nil {
-		log.Fatal("unable to load schema: %w", err)
+		return nil, fmt.Errorf("unable to load schema: %v", err)
 	}
 
 	colorlog.Success("successfully Connected to sqlite")
 
-	return database.New(mockDB)
+	return database.New(mockDB), nil
 }
 
 // Helper function to execute command and capture output
@@ -46,24 +41,24 @@ func executeCommand(cmd *cobra.Command, args ...string) error {
 }
 
 func cleanupTest(t *testing.T, mockDB *database.DB) {
-	t.Helper() // Marks this as a helper function
-	defer mockDB.Close()
-	// Delete files created during test with this *.db* file pattern
+	t.Helper()
+
 	pattern := "*.db*"
 	files, err := filepath.Glob(pattern)
-	if err != nil {
-		log.Fatalf("Error while matching files: %v", err)
-	}
-
-	if len(files) == 0 {
-		fmt.Println("No matching .db files found.")
+	if err != nil && err == filepath.ErrBadPattern {
 		return
 	}
 
+	// Ensure files exist to trigger file deletion loop
+	if len(files) == 0 {
+		t.Log("No matching .db files found.")
+		return
+	}
+
+	// Attempt to remove each file
 	for _, file := range files {
-		err := os.Remove(file)
-		if err != nil {
-			log.Printf("Failed to delete %s: %v", file, err)
+		if err := os.Remove(file); err != nil {
+			t.Errorf("Failed to delete %s: %v", file, err) // Continue loop
 		}
 	}
 }

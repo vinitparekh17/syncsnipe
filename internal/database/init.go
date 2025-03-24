@@ -23,7 +23,11 @@ func GetDatabase(dbFile string) *DB {
 }
 
 func (db *DB) LoadSchema(filePath string) error {
-	fs := stuffbin.LoadFile(filePath)
+	fs, err := stuffbin.LoadFile(filePath)
+	if err != nil {
+		colorlog.Error("error loading schema file: %v", err)
+		return err
+	}
 
 	if !tableExists(db, "files") {
 		file, err := fs.Get(filePath)

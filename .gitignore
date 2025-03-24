@@ -5,6 +5,7 @@ node_modules
 frontend/.svelte-kit
 frontend/build
 syncsnipe
+*.out
 
 # OS
 .DS_Store
