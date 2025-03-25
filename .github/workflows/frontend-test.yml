@@ -24,9 +24,9 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - name: Debug: List current directory
+      - name: Debug List current directory
         run: ls -al # Lists all files and directories in the current directory
-      - name: Debug: List frontend directory
+      - name: Debug List frontend directory
         run: ls -al frontend # Lists files in the frontend directory
       - name: Install pnpm
         uses: pnpm/action-setup@v4
