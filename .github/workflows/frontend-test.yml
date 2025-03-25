@@ -22,46 +22,46 @@ on:
 jobs:
   test:
     runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        node-version: [22.11.x]
     steps:
-    - uses: actions/checkout@v4
-    - name: Install pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: 10
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'pnpm'
-    - name: Get pnpm store directory
-      id: pnpm-cache
-      run: echo "dir=$(pnpm store path)" >> $GITHUB_OUTPUT
-    - name: Cache dependencies
-      id: cache
-      run : echo | ls -l
-      uses: actions/cache@v4
-      with:
-        path: ${{ steps.pnpm-cache.outputs.dir }}
-        key: ${{ runner.os }}-pnpm-${{ hashFiles('frontend/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-build-
-          ${{ runner.os }}-
-    - uses: dorny/paths-filter@v3
-      id: file_types
-      with:
-        filters: |
-          watch_file_changes:
-            - '**/*.js'
-            - '**/*.ts'
-            - '**/*.svelte'
-            - 'package.json'
-            - 'pnpm-lock.yaml'
-    - name: Install dependencies
-      if: steps.file_types.outputs.watch_file_changes == 'true'
-      run: pnpm install --frozen-lockfile
-    - name: Run tests
-      if: steps.file_types.outputs.watch_file_changes == 'true'
-      run: pnpm test
+      - uses: actions/checkout@v4
+      - name: Debug: List current directory
+        run: ls -al # Lists all files and directories in the current directory
+      - name: Debug: List frontend directory
+        run: ls -al frontend # Lists files in the frontend directory
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "dir=$(pnpm store path)" >> $GITHUB_OUTPUT
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.dir }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - uses: dorny/paths-filter@v3
+        id: file_types
+        with:
+          filters: |
+            watch_file_changes:
+              - '**/*.js'
+              - '**/*.ts'
+              - '**/*.svelte'
+              - 'package.json'
+              - 'frontend/pnpm-lock.yaml'
+      - name: Install dependencies
+        if: steps.file_types.outputs.watch_file_changes == 'true'
+        run: cd frontend && pnpm install --frozen-lockfile
+      - name: Run tests
+        if: steps.file_types.outputs.watch_file_changes == 'true'
+        run: cd frontend && pnpm test
