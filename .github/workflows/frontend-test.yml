@@ -1,0 +1,72 @@
+name: syncsnipe-frontend-test-suite
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+        - "**.go"
+        - "**.sql"
+        - "go.*"
+        - "docs/**"
+        - "**.md"
+        - "**.txt"
+        - "**.json"
+        - "**.yaml"
+        - "**.yml"
+        - "LICENSE"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**.go"
+      - "**.sql"
+      - "go.*"
+      - "docs/**"
+      - "**.md"
+      - "**.txt"
+      - "**.json"
+      - "**.yaml"
+      - "**.yml"
+      - "LICENSE"
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        node-version: [22.11.x]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'pnpm'
+    - name: Cache dependencies
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.local/share/pnpm/store/v10/files
+        key: ${{ runner.os }}-build-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
+    - uses: dorny/paths-filter@v3
+      id: file_types
+      with:
+        filters: |
+          watch_file_changes:
+            - '**/*.js'
+            - '**/*.ts'
+            - '**/*.svelte'
+            - 'package.json'
+            - 'pnpm-lock.yaml'
+    - name: Install dependencies
+      if: steps.file_types.outputs.watch_file_changes == 'true'
+      run: pnpm install
+      continue-on-error: false
+    - name: Run tests
+      if: steps.file_types.outputs.watch_file_changes == 'true'
+      run: pnpm test
