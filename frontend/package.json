@@ -1,8 +1,9 @@
 {
-	"name": "frontend",
+	"name": "syncsnipe-frontend",
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
+	"packageManager": "pnpm@10.6.3",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
@@ -45,5 +46,8 @@
 		"onlyBuiltDependencies": [
 			"esbuild"
 		]
+	},
+	"engines": {
+		"pnpm": ">=9.0.0"
 	}
 }
