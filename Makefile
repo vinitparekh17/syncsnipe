@@ -24,7 +24,9 @@ help: ## Display help message with available targets
 
 ##@ DEPENDENCIES
 
-install-deps: ## Install dependencies for backend and frontend 
+install-deps: ## Install all dependencies
+	@echo "Installing dependencies..."
+	@go mod download
 	@cd $(FRONTEND_DIR) && pnpm install --frozen-lockfile
 
 $(STUFFBIN): ## Install stuffbin if missing
