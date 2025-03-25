@@ -36,11 +36,11 @@ jobs:
         run_install: false
 
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4.3.0
+      uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'pnpm'
-        cache-dependency-path: 'frontend/pnpm-lock.yaml'
+        cache-dependency-path: '**/pnpm-lock.yaml'
 
     - name: Install dependencies
       if: steps.file_types.outputs.watch_file_changes == 'true'
