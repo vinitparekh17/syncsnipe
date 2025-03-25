@@ -41,8 +41,8 @@ jobs:
       run: echo "dir=$(pnpm store path)" >> $GITHUB_OUTPUT
     - name: Cache dependencies
       id: cache
+      run : echo | ls -l
       uses: actions/cache@v4
-      run: echo | ls -a
       with:
         path: ${{ steps.pnpm-cache.outputs.dir }}
         key: ${{ runner.os }}-pnpm-${{ hashFiles('frontend/pnpm-lock.yaml') }}
