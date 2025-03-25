@@ -39,8 +39,6 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'pnpm'
-        cache-dependency-path: '**/pnpm-lock.yaml'
 
     - name: Install dependencies
       if: steps.file_types.outputs.watch_file_changes == 'true'
