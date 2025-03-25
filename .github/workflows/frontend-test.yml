@@ -40,7 +40,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'pnpm'
-        cache-dependency-path: 'frontend/pnpm-lock.yaml'
+        cache-dependency-path: './frontend/pnpm-lock.yaml'
 
     - name: Install dependencies
       if: steps.file_types.outputs.watch_file_changes == 'true'
