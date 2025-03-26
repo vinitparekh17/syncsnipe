@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	DefaultPort = "8000"
-	dbFile      = "syncsnipe.db"
+	dbFile = "syncsnipe.db"
 )
 
 var rootCmd = &cobra.Command{Use: "syncsnipe"}
@@ -39,7 +38,6 @@ func Execute() error {
 	if err != nil {
 		return err
 	}
-	webCmd.PersistentFlags().StringVarP(&web.Port, "port", "p", DefaultPort, "choose port for web server")
 	rootCmd.AddCommand(webCmd)
 
 	cliCmd := cli.NewCliCmd(dbTx)

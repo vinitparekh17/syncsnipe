@@ -15,7 +15,9 @@ import (
 	s "github.com/vinitparekh17/syncsnipe/internal/sync"
 )
 
-var Port string
+const DefaultPort = "8080"
+
+var port string
 
 func NewWebCmd(dbTx *database.Queries) (*cobra.Command, error) {
 	var wg sync.WaitGroup
@@ -52,11 +54,11 @@ func NewWebCmd(dbTx *database.Queries) (*cobra.Command, error) {
 		colorlog.Success("graceful shutdown completed.")
 	}()
 
-	return &cobra.Command{
+	webCmd := &cobra.Command{
 		Use:   "web",
 		Short: "run web interface",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			server, err := server.NewServer(app, Port)
+			server, err := server.NewServer(app, port)
 			if err != nil {
 				return err
 			}
@@ -66,5 +68,8 @@ func NewWebCmd(dbTx *database.Queries) (*cobra.Command, error) {
 			}
 			return nil
 		},
-	}, nil
+	}
+
+	webCmd.PersistentFlags().StringVarP(&port, "port", "p", DefaultPort, "choose port for web server")
+	return webCmd, nil
 }
