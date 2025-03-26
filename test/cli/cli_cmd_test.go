@@ -4,16 +4,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/vinitparekh17/syncsnipe/test"
 )
 
 func TestSetupTest_MissingSchema_Error(t *testing.T) {
-	oldSchema := schemaFile
-	schemaFile = "non-existent.sql"
+	oldSchema := test.SchemaFile
+	test.SchemaFile = "non-existent.sql"
 	defer func() {
-		schemaFile = oldSchema
+		test.SchemaFile = oldSchema
 	}()
 
-	q, err := setupTest(t)
+	q, err := test.SetupTest(t)
 	assert.ErrorContains(t, err, "unable to load schema")
 	assert.Nil(t, q)
 }
@@ -24,5 +25,5 @@ func TestNewCliCmd(t *testing.T) {
 		assert.NotNil(t, cliCmd)
 	})
 
-	defer cleanupTest(t, mockDB)
+	defer test.CleanupTest(t, test.MockDB)
 }
