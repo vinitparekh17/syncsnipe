@@ -55,24 +55,14 @@ func (sw *SyncWatcher) Start() {
 	sw.wg.Add(1)
 	go func() {
 		defer sw.wg.Done()
-		debounce := make(map[string]*time.Timer)
-		const debounceTime = 250 * time.Millisecond
-
+		debounceHandler := sw.debounce(DEBOUNCE_TIME, sw.handleEvent)
 		for {
 			select {
 			case event, ok := <-sw.watcher.Events:
 				if !ok {
 					return
 				}
-
-				if timer, exists := debounce[event.Name]; exists {
-					timer.Reset(debounceTime)
-				} else {
-					debounce[event.Name] = time.AfterFunc(debounceTime, func() {
-						sw.handleEvent(event)
-						delete(debounce, event.Name)
-					})
-				}
+				debounceHandler(event)
 
 			case err, ok := <-sw.watcher.Errors:
 				if !ok {
@@ -82,6 +72,23 @@ func (sw *SyncWatcher) Start() {
 			}
 		}
 	}()
+}
+
+// debounce is a wrapper function to debounce events for a given time duration.
+func (sw *SyncWatcher) debounce(debounceTime time.Duration, handle func(event fsnotify.Event)) func(event fsnotify.Event) {
+	debounceMap := make(map[string]*time.Timer)
+	return func(event fsnotify.Event) {
+		sw.mu.Lock()
+		if timer, exists := debounceMap[event.Name]; exists {
+			timer.Reset(debounceTime)
+		} else {
+			debounceMap[event.Name] = time.AfterFunc(debounceTime, func() {
+				handle(event)
+				delete(debounceMap, event.Name)
+			})
+		}
+		sw.mu.Unlock()
+	}
 }
 
 func (sw *SyncWatcher) handleEvent(event fsnotify.Event) {
@@ -98,16 +105,22 @@ func (sw *SyncWatcher) handleEvent(event fsnotify.Event) {
 	op := SyncOperation{path: event.Name, timeStamp: time.Now()}
 	switch {
 	case event.Op&fsnotify.Create == fsnotify.Create || event.Op&fsnotify.Write == fsnotify.Write:
-		op.operation = "create_or_modify"
-		// TODO: create hash
+		op.operation = CREATE_OR_MODIFY
+		hash, err := ComputeHash(event.Name)
+		if err != nil {
+			colorlog.Error("skipping event for file %s: %v", filepath.Base(event.Name), err)
+			return
+		}
+		op.hash = hash
 	case event.Op&fsnotify.Remove == fsnotify.Remove:
-		op.operation = "remove"
+		op.operation = DELETE
 	case event.Op&fsnotify.Rename == fsnotify.Rename:
-		op.operation = "rename"
+		op.operation = RENAME
 		// op.OldPath = event.Name
 	default:
 		return
 	}
+	sw.syncQueue <- &op
 }
 
 func (sw *SyncWatcher) AddDirectory(path string) error {
