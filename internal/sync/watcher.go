@@ -72,6 +72,7 @@ func (sw *SyncWatcher) Start() {
 			}
 		}
 	}()
+	colorlog.Success("SyncWatcher started successfully.")
 }
 
 // debounce is a wrapper function to debounce events for a given time duration.

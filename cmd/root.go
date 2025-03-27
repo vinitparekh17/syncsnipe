@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/vinitparekh17/syncsnipe/cmd/cli"
 	"github.com/vinitparekh17/syncsnipe/cmd/web"
-	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
 	"github.com/vinitparekh17/syncsnipe/internal/database"
 )
 
@@ -21,15 +20,9 @@ var schemaFile = filepath.Join("sql", "schema.sql")
 func Execute() error {
 	db := database.GetDatabase(dbFile)
 
-	if err := db.Ping(); err != nil {
-		return fmt.Errorf("error pinging db: %w", err)
-	}
-
 	if err := db.LoadSchema(schemaFile); err != nil {
 		return fmt.Errorf("unable to load schema: %w", err)
 	}
-
-	colorlog.Success("successfully Connected to sqlite")
 	defer db.Close()
 
 	dbTx := database.New(db)

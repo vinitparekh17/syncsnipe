@@ -3,7 +3,6 @@ package colorlog
 import (
 	"fmt"
 	"log"
-	"os"
 )
 
 const (
@@ -12,6 +11,9 @@ const (
 	ANSIColourRed    = "\033[31m" // Error (Red)
 	ANSIColourCyan   = "\x1b[36m" // Info (Cyan)
 	ANSIReset        = "\033[0m"  // Reset color
+
+	CLIPREFIX = ANSIColourCyan + "syncsnipe →" + ANSIReset + " "
+	NEWLINE   = "\n"
 )
 
 func Info(format string, v ...any) {
@@ -30,13 +32,10 @@ func Error(format string, v ...any) {
 	log.Printf(ANSIColourRed+" "+format+ANSIReset, v...)
 }
 
-// Complete logs a success message in green and exits with 0 in CLI mode; no exit in test mode.
-func Complete(format string, v ...any) {
-	msg := fmt.Sprintf(format, v...)
-	fullMsg := ANSIColourGreen + " " + msg + ANSIReset
-	if os.Getenv("TESTING") == "" {
-		log.Print(fullMsg)
-		os.Exit(0)
-	}
-	log.Print(msg) // Just log in test mode
+func CLISuccess(format string, v ...any) {
+	fmt.Printf(CLIPREFIX+ANSIColourGreen+format+ANSIReset+NEWLINE, v...)
+}
+
+func CLIError(format string, v ...any) {
+	fmt.Printf(CLIPREFIX+ANSIColourRed+format+ANSIReset+NEWLINE, v...)
 }

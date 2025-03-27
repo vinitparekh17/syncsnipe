@@ -20,44 +20,42 @@ const DefaultPort = "8080"
 var port string
 
 func NewWebCmd(dbTx *database.Queries) (*cobra.Command, error) {
-	var wg sync.WaitGroup
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	shutdownChan := make(chan struct{})
-	watcher, err := s.NewSyncWatcher(dbTx)
-	if err != nil {
-		return nil, fmt.Errorf("unable to start watcher: %v", err)
-	}
-
-	app := &core.SyncEngine{
-		DB:           dbTx,
-		Watcher:      watcher,
-		ShutdownChan: shutdownChan,
-	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		watcher.Start()
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		<-sigChan
-		colorlog.Info("shutdown signal received")
-		close(shutdownChan)
-
-		watcher.Close()
-		colorlog.Success("graceful shutdown completed.")
-	}()
-
 	webCmd := &cobra.Command{
 		Use:   "web",
 		Short: "run web interface",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var wg sync.WaitGroup
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+			shutdownChan := make(chan struct{})
+			watcher, err := s.NewSyncWatcher(dbTx)
+			if err != nil {
+				return fmt.Errorf("unable to start watcher: %v", err)
+			}
+
+			app := &core.SyncEngine{
+				DB:           dbTx,
+				Watcher:      watcher,
+				ShutdownChan: shutdownChan,
+			}
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				watcher.Start()
+			}()
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				<-sigChan
+				colorlog.Info("shutdown signal received")
+				close(shutdownChan)
+				colorlog.Success("graceful shutdown completed.")
+			}()
+
 			server, err := server.NewServer(app, port)
 			if err != nil {
 				return err

@@ -17,6 +17,7 @@ import (
 type SyncServer struct {
 	server *http.Server
 	Mux    *http.ServeMux
+	app    *core.SyncEngine
 }
 
 func NewServer(app *core.SyncEngine, port string) (*SyncServer, error) {
@@ -38,6 +39,7 @@ func NewServer(app *core.SyncEngine, port string) (*SyncServer, error) {
 			ReadTimeout: 5 * time.Second,
 		},
 		Mux: mux,
+		app: app,
 	}, nil
 }
 
@@ -69,8 +71,13 @@ func (s *SyncServer) Run(shutDownChan <-chan struct{}) error {
 		colorlog.Info("shutting down web server")
 		shutDownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		return s.server.Shutdown(shutDownCtx)
+		return s.shutdown(shutDownCtx)
 	case err := <-errChan:
 		return err
 	}
+}
+
+func (s *SyncServer) shutdown(shutDownCtx context.Context) error {
+	s.app.Watcher.Close()
+	return s.server.Shutdown(shutDownCtx)
 }

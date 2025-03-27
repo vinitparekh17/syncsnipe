@@ -65,14 +65,26 @@ SELECT *
   WHERE profile_id = ? AND enabled = 1
   ORDER BY source_dir;
 
+-- name: ListSyncRulesGroupByProfile :many
+SELECT sr.profile_id as pid,
+  p.name as profile_name,
+  COUNT(sr.id) as rule_count,
+  sr.source_dir,
+  sr.target_dir
+  FROM sync_rules sr
+  JOIN profiles p ON sr.profile_id = p.id
+  -- WHERE sr.enabled = 1
+  GROUP BY sr.profile_id
+  ORDER BY sr.profile_id;
+
 -- name: UpdateSyncRule :exec
 UPDATE sync_rules
   SET enabled = ?, last_run_successful = ?, updated_at = strftime('%s', 'now')
   WHERE id = ?;
 
--- name: DeleteSyncRule :exec
+-- name: DeleteSyncRuleByProfileName :execrows
 DELETE FROM sync_rules
-  WHERE id = ?;
+  WHERE profile_id = (SELECT id FROM profiles WHERE name = ?) AND source_dir = ?;
 
 -- name: UpsertFile :exec
 INSERT INTO files (

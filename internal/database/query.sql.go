@@ -71,10 +71,10 @@ RETURNING id
 `
 
 type AddSyncRuleParams struct {
-	ProfileID int64        `json:"profile_id"`
-	SourceDir string       `json:"source_dir"`
-	TargetDir string       `json:"target_dir"`
-	Enabled   sql.NullBool `json:"enabled"`
+	ProfileID int64  `json:"profile_id"`
+	SourceDir string `json:"source_dir"`
+	TargetDir string `json:"target_dir"`
+	Enabled   bool   `json:"enabled"`
 }
 
 func (q *Queries) AddSyncRule(ctx context.Context, arg AddSyncRuleParams) (int64, error) {
@@ -141,14 +141,22 @@ func (q *Queries) DeleteProfileByName(ctx context.Context, name string) (int64, 
 	return result.RowsAffected()
 }
 
-const deleteSyncRule = `-- name: DeleteSyncRule :exec
+const deleteSyncRuleByProfileName = `-- name: DeleteSyncRuleByProfileName :execrows
 DELETE FROM sync_rules
-  WHERE id = ?
+  WHERE profile_id = (SELECT id FROM profiles WHERE name = ?) AND source_dir = ?
 `
 
-func (q *Queries) DeleteSyncRule(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteSyncRule, id)
-	return err
+type DeleteSyncRuleByProfileNameParams struct {
+	Name      string `json:"name"`
+	SourceDir string `json:"source_dir"`
+}
+
+func (q *Queries) DeleteSyncRuleByProfileName(ctx context.Context, arg DeleteSyncRuleByProfileNameParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteSyncRuleByProfileName, arg.Name, arg.SourceDir)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getConflict = `-- name: GetConflict :one
@@ -451,6 +459,56 @@ func (q *Queries) ListSyncRules(ctx context.Context, profileID int64) ([]SyncRul
 	return items, nil
 }
 
+const listSyncRulesGroupByProfile = `-- name: ListSyncRulesGroupByProfile :many
+SELECT sr.profile_id as pid,
+  p.name as profile_name,
+  COUNT(sr.id) as rule_count,
+  sr.source_dir,
+  sr.target_dir
+  FROM sync_rules sr
+  JOIN profiles p ON sr.profile_id = p.id
+  -- WHERE sr.enabled = 1
+  GROUP BY sr.profile_id
+  ORDER BY sr.profile_id
+`
+
+type ListSyncRulesGroupByProfileRow struct {
+	Pid         int64  `json:"pid"`
+	ProfileName string `json:"profile_name"`
+	RuleCount   int64  `json:"rule_count"`
+	SourceDir   string `json:"source_dir"`
+	TargetDir   string `json:"target_dir"`
+}
+
+func (q *Queries) ListSyncRulesGroupByProfile(ctx context.Context) ([]ListSyncRulesGroupByProfileRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSyncRulesGroupByProfile)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSyncRulesGroupByProfileRow
+	for rows.Next() {
+		var i ListSyncRulesGroupByProfileRow
+		if err := rows.Scan(
+			&i.Pid,
+			&i.ProfileName,
+			&i.RuleCount,
+			&i.SourceDir,
+			&i.TargetDir,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUnresolvedConflicts = `-- name: ListUnresolvedConflicts :many
 SELECT c.id, c.source_path, c.target_path, c.source_hash, c.target_hash, c.source_time, c.target_time, c.detected_at, c.resolution_status, c.resolved_at 
   FROM conflicts c
@@ -562,7 +620,7 @@ UPDATE sync_rules
 `
 
 type UpdateSyncRuleParams struct {
-	Enabled           sql.NullBool `json:"enabled"`
+	Enabled           bool         `json:"enabled"`
 	LastRunSuccessful sql.NullBool `json:"last_run_successful"`
 	ID                int64        `json:"id"`
 }

@@ -50,7 +50,7 @@ type SyncRule struct {
 	ProfileID         int64         `json:"profile_id"`
 	SourceDir         string        `json:"source_dir"`
 	TargetDir         string        `json:"target_dir"`
-	Enabled           sql.NullBool  `json:"enabled"`
+	Enabled           bool          `json:"enabled"`
 	LastRun           sql.NullInt64 `json:"last_run"`
 	LastRunSuccessful sql.NullBool  `json:"last_run_successful"`
 	CreatedAt         int64         `json:"created_at"`

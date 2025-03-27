@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS sync_rules (
     profile_id INTEGER NOT NULL,
     source_dir TEXT NOT NULL UNIQUE,
     target_dir TEXT NOT NULL,
-    enabled BOOLEAN DEFAULT 1,
+    enabled BOOLEAN NOT NULL DEFAULT 1,
     last_run INTEGER,
     last_run_successful BOOLEAN DEFAULT NULL, -- Track success or failure of last run
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
