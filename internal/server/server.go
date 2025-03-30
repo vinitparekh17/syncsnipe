@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -16,7 +15,7 @@ import (
 
 type SyncServer struct {
 	server *http.Server
-	Mux    *http.ServeMux
+	mux    *http.ServeMux
 	app    *core.SyncEngine
 }
 
@@ -38,7 +37,7 @@ func NewServer(app *core.SyncEngine, port string) (*SyncServer, error) {
 			Handler:     mux,
 			ReadTimeout: 5 * time.Second,
 		},
-		Mux: mux,
+		mux: mux,
 		app: app,
 	}, nil
 }
@@ -50,8 +49,8 @@ func NewMuxRouter() (*http.ServeMux, error) {
 		return nil, fmt.Errorf("error loading frontend files: %v", err)
 	}
 
-	mux.Handle("/_app/", http.StripPrefix("/_app/", http.FileServer(http.Dir(filepath.Join(handler.FrontendDir, "_app")))))
-	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir(filepath.Join(handler.FrontendDir, "images")))))
+	mux.Handle("/_app/", handler.ServeApp(fs))
+	mux.Handle("/assets/", handler.ServeAssets(fs))
 	mux.HandleFunc("/", handler.ServeIndexPage(fs))
 	return mux, nil
 }

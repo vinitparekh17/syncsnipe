@@ -9,7 +9,7 @@ import (
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
 )
 
-func WatchRecursive(watcher *fsnotify.Watcher, root string) error {
+func watchRecursive(watcher *fsnotify.Watcher, root string) error {
 	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -19,23 +19,6 @@ func WatchRecursive(watcher *fsnotify.Watcher, root string) error {
 		}
 		return nil
 	})
-}
-
-func (sw *SyncWatcher) shouldIgnore(path string, profileID int64) bool {
-	sw.mu.Lock()
-	defer sw.mu.Unlock()
-
-	petterns, exists := sw.ignoreList[profileID]
-	if !exists {
-		return false
-	}
-
-	for _, pattern := range petterns {
-		if matched, err := filepath.Match(pattern, filepath.Base(path)); matched && err == nil {
-			return true
-		}
-	}
-	return false
 }
 
 func copyFile(source, target string) error {

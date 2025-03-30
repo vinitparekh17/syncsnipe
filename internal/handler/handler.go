@@ -43,3 +43,40 @@ func ServeIndexPage(fs stuffbin.FileSystem) http.HandlerFunc {
 		http.ServeContent(w, r, "index.html", time.Now(), file)
 	}
 }
+
+func ServeAssets(fs stuffbin.FileSystem) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		assetPath := r.URL.Path[len("/assets/"):]
+		file, err := fs.Get(filepath.Join(FrontendDir, assetPath))
+		if err != nil {
+			colorlog.Error("error at fs.Get: %v", err)
+			http.Error(w, "page not found", http.StatusNotFound)
+			return
+		}
+		http.ServeContent(w, r, assetPath, time.Now(), file)
+	}
+}
+
+// ServeApp serves the _app directory (sveltekit build output)
+func ServeApp(fs stuffbin.FileSystem) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		appPath := r.URL.Path[len("/_app/"):]
+		file, err := fs.Get(filepath.Join(FrontendDir, appPath))
+		if err != nil {
+			colorlog.Error("error at fs.Get: %v", err)
+			http.Error(w, "page not found", http.StatusNotFound)
+			return
+		}
+		http.ServeContent(w, r, appPath, time.Now(), file)
+	}
+}
