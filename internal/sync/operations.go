@@ -53,7 +53,7 @@ func (s *SyncWorker) processOperation(op *SyncOperation) {
 	}
 
 	switch op.operation {
-	case CREATE_OR_MODIFY:
+	case CreateOrModifyEvent:
 		s.handleCreateOrModify(op, targetPath)
 	default:
 		colorlog.Warn("Unsupported operation %s", op.operation)

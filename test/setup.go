@@ -25,7 +25,10 @@ var (
 
 // SetupTest initializes test database and loads schema
 func SetupTest(t *testing.T) (*database.Queries, error) {
-	MockDB = database.GetDatabase(mockDBFile)
+	MockDB, err := database.GetDatabase(mockDBFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get database: %v", err)
+	}
 
 	if err := MockDB.LoadSchema(SchemaFile); err != nil {
 		return nil, fmt.Errorf("failed to load schema: %v", err)

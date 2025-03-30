@@ -10,15 +10,21 @@ import (
 	"github.com/vinitparekh17/syncsnipe/internal/database"
 )
 
+// TODO: Make this configurable
 const (
 	dbFile = "syncsnipe.db"
 )
 
-var rootCmd = &cobra.Command{Use: "syncsnipe"}
-var schemaFile = filepath.Join("sql", "schema.sql")
+var (
+	rootCmd    = &cobra.Command{Use: "syncsnipe"}
+	schemaFile = filepath.Join("sql", "schema.sql")
+)
 
 func Execute() error {
-	db := database.GetDatabase(dbFile)
+	db, err := database.GetDatabase(dbFile)
+	if err != nil {
+		return fmt.Errorf("unable to get database: %w", err)
+	}
 
 	if err := db.LoadSchema(schemaFile); err != nil {
 		return fmt.Errorf("unable to load schema: %w", err)

@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql"
-	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
@@ -13,13 +12,13 @@ type DB struct {
 	*sql.DB
 }
 
-func GetDatabase(dbFile string) *DB {
+func GetDatabase(dbFile string) (*DB, error) {
 	db, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
-		log.Fatalf("failed to open db connection: %v", err)
+		return nil, err
 	}
 
-	return &DB{db}
+	return &DB{db}, nil
 }
 
 func (db *DB) LoadSchema(filePath string) error {

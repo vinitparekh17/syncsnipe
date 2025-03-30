@@ -60,7 +60,7 @@ func (sw *SyncWatcher) Start() {
 	go func() {
 		defer sw.wg.Done()
 
-		debounceHandler := sw.debounce(DEBOUNCE_TIME, sw.handleEvent)
+		debounceHandler := sw.debounce(DebounceTime, sw.handleEvent)
 		for {
 			select {
 			case event, ok := <-sw.watcher.Events:
@@ -140,7 +140,7 @@ func (sw *SyncWatcher) createOperation(event fsnotify.Event) *SyncOperation {
 
 	switch {
 	case event.Op&fsnotify.Create == fsnotify.Create || event.Op&fsnotify.Write == fsnotify.Write:
-		op.operation = CREATE_OR_MODIFY
+		op.operation = CreateOrModifyEvent
 		hash, err := ComputeHash(event.Name)
 		if err != nil {
 			colorlog.Error("skipping event for file %s: %v", filepath.Base(event.Name), err)
@@ -148,9 +148,9 @@ func (sw *SyncWatcher) createOperation(event fsnotify.Event) *SyncOperation {
 		}
 		op.hash = hash
 	case event.Op&fsnotify.Remove == fsnotify.Remove:
-		op.operation = DELETE
+		op.operation = DeleteEvent
 	case event.Op&fsnotify.Rename == fsnotify.Rename:
-		op.operation = RENAME
+		op.operation = RenameEvent
 		// op.OldPath = event.Name
 	default:
 		return nil

@@ -12,7 +12,7 @@ import (
 	"unicode"
 )
 
-func DisplayList(items interface{}) error {
+func DisplayList(items any) error {
 	sliceValue := reflect.ValueOf(items)
 	if sliceValue.Kind() != reflect.Slice {
 		return fmt.Errorf("input must be a slice")
@@ -48,7 +48,7 @@ func DisplayList(items interface{}) error {
 	return nil
 }
 
-func DisplayStruct(item interface{}) error {
+func DisplayStruct(item any) error {
 	headers, values, err := extractHeadersAndValues(item)
 	if err != nil {
 		return err
@@ -65,7 +65,7 @@ func extractHeadersAndValues(item interface{}) (headers, values []string, err er
 		return nil, nil, fmt.Errorf("expected a struct, got %s", v.Kind())
 	}
 	t := v.Type()
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		field := t.Field(i)
 		if !field.IsExported() {
 			continue
@@ -94,7 +94,7 @@ func humanizeFieldName(name string) string {
 	return string(result)
 }
 
-func formatField(name string, value interface{}) string {
+func formatField(name string, value any) string {
 	if value == nil {
 		return ""
 	}

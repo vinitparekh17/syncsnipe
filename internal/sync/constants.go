@@ -3,9 +3,9 @@ package sync
 import "time"
 
 const (
-	CREATE_OR_MODIFY string = "CREATE_OR_MODIFY"
-	DELETE           string = "DELETE"
-	RENAME           string = "RENAME"
+	CreateOrModifyEvent string = "CREATE_OR_MODIFY"
+	DeleteEvent         string = "DELETE"
+	RenameEvent         string = "RENAME"
 
-	DEBOUNCE_TIME time.Duration = 250 * time.Millisecond
+	DebounceTime time.Duration = 250 * time.Millisecond
 )
