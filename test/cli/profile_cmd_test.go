@@ -3,20 +3,12 @@ package cli
 import (
 	"testing"
 
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
-	"github.com/vinitparekh17/syncsnipe/cmd/cli"
 	"github.com/vinitparekh17/syncsnipe/test"
 )
 
-func getCliCmd(t *testing.T) *cobra.Command {
-	q, err := test.SetupTest(t)
-	assert.NoError(t, err)
-	return cli.NewCliCmd(q)
-}
-
 func TestProfileCommands(t *testing.T) {
-	cliCmd := getCliCmd(t)
+	cliCmd := test.GetCliCmd(t)
 
 	t.Run("ProfileCmd", func(t *testing.T) {
 		err := test.ExecuteCommand(cliCmd, "profile")
