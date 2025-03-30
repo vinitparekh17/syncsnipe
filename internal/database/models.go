@@ -46,13 +46,12 @@ type Profile struct {
 }
 
 type SyncRule struct {
-	ID                int64         `json:"id"`
-	ProfileID         int64         `json:"profile_id"`
-	SourceDir         string        `json:"source_dir"`
-	TargetDir         string        `json:"target_dir"`
-	Enabled           bool          `json:"enabled"`
-	LastRun           sql.NullInt64 `json:"last_run"`
-	LastRunSuccessful sql.NullBool  `json:"last_run_successful"`
-	CreatedAt         int64         `json:"created_at"`
-	UpdatedAt         int64         `json:"updated_at"`
+	ID                int64        `json:"id"`
+	ProfileID         int64        `json:"profile_id"`
+	SourceDir         string       `json:"source_dir"`
+	TargetDir         string       `json:"target_dir"`
+	Status            string       `json:"status"`
+	LastRunSuccessful sql.NullBool `json:"last_run_successful"`
+	CreatedAt         int64        `json:"created_at"`
+	UpdatedAt         int64        `json:"updated_at"`
 }

@@ -22,6 +22,7 @@ A sync rule defines how files from a source directory should be synchronized to 
 		newAddSyncCmd(syncService),
 		newUnsyncCmd(syncService),
 		newListSyncCmd(syncService),
+		newStatusSyncCmd(syncService),
 	)
 
 	return syncCmd
@@ -78,6 +79,22 @@ func newListSyncCmd(syncService core.SyncService) *cobra.Command {
 				return fmt.Errorf("failed to fetch sync rules: %w", err)
 			}
 			return cli.DisplayList(syncRules)
+		},
+	}
+}
+
+func newStatusSyncCmd(syncService core.SyncService) *cobra.Command {
+	return &cobra.Command{
+		Use:   "status [profile]",
+		Short: "Check the status of a sync rule",
+		Long:  "Check the status of a sync rule for a specific profile.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			syncStatus, err := syncService.GetSyncStatusByProfileName(cmd.Context(), args[0])
+			if err != nil {
+				return fmt.Errorf("failed to get sync status: %w", err)
+			}
+			return cli.DisplayStruct(syncStatus)
 		},
 	}
 }

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -21,35 +22,21 @@ func DisplayList(items interface{}) error {
 		return nil
 	}
 
-	// Check if the elements are structs
-	elemType := sliceValue.Type().Elem()
-	if elemType.Kind() != reflect.Struct {
-		return fmt.Errorf("slice elements must be structs, got %s", elemType.Kind())
+	// Use the first element to extract headers.
+	firstElem := sliceValue.Index(0).Interface()
+	headers, _, err := extractHeadersAndValues(firstElem)
+	if err != nil {
+		return err
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-
-	headers := []string{}
-	for i := range elemType.NumField() {
-		field := elemType.Field(i)
-		if !field.IsExported() {
-			continue
-		}
-		headers = append(headers, humanizeFieldName(field.Name))
-	}
 	fmt.Fprintf(w, "%s\n", strings.Join(headers, "\t"))
 
+	// Process each struct element.
 	for i := range sliceValue.Len() {
-		elemValue := sliceValue.Index(i)
-		values := []string{}
-		for j := range elemType.NumField() {
-			field := elemType.Field(j)
-			if !field.IsExported() {
-				continue
-			}
-			fieldValue := elemValue.Field(j).Interface()
-			fieldName := elemType.Field(j).Name
-			values = append(values, formatField(fieldName, fieldValue))
+		_, values, err := extractHeadersAndValues(sliceValue.Index(i).Interface())
+		if err != nil {
+			return err
 		}
 		fmt.Fprintf(w, "%s\n", strings.Join(values, "\t"))
 	}
@@ -61,9 +48,40 @@ func DisplayList(items interface{}) error {
 	return nil
 }
 
+func DisplayStruct(item interface{}) error {
+	headers, values, err := extractHeadersAndValues(item)
+	if err != nil {
+		return err
+	}
+	for i, header := range headers {
+		fmt.Printf("%s: %s\n", header, values[i])
+	}
+	return nil
+}
+
+func extractHeadersAndValues(item interface{}) (headers, values []string, err error) {
+	v := reflect.ValueOf(item)
+	if v.Kind() != reflect.Struct {
+		return nil, nil, fmt.Errorf("expected a struct, got %s", v.Kind())
+	}
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+		headers = append(headers, humanizeFieldName(field.Name))
+		values = append(values, formatField(field.Name, v.Field(i).Interface()))
+	}
+	return headers, values, nil
+}
+
 func humanizeFieldName(name string) string {
-	if name == "ID" {
-		return name
+	if strings.HasSuffix(name, "ID") {
+		if name == "ID" {
+			return name
+		}
+		return strings.TrimSuffix(name, "ID") + " ID"
 	}
 
 	var result []rune
@@ -81,15 +99,38 @@ func formatField(name string, value interface{}) string {
 		return ""
 	}
 
+	// Handle sql.Null types
+	switch v := value.(type) {
+	case sql.NullBool:
+		if !v.Valid {
+			return "null"
+		}
+		return fmt.Sprintf("%t", v.Bool)
+	case sql.NullString:
+		if !v.Valid {
+			return "null"
+		}
+		return v.String
+	case sql.NullInt64:
+		if !v.Valid {
+			return "null"
+		}
+		return fmt.Sprintf("%d", v.Int64)
+	case sql.NullFloat64:
+		if !v.Valid {
+			return "null"
+		}
+		return fmt.Sprintf("%f", v.Float64)
+	}
+
+	// Handle timestamps
 	ts, ok := value.(int64)
-	if !ok {
-		return fmt.Sprintf("%v", value) // Default to %v if not int64
+	if ok {
+		if strings.HasSuffix(name, "At") {
+			return time.Unix(ts, 0).Format("2006-01-02 03:04 PM")
+		}
+		return fmt.Sprintf("%d", ts)
 	}
 
-	// Check if the field name suggests a timestamp
-	if strings.HasSuffix(name, "At") {
-		return time.Unix(ts, 0).Format("2006-01-02 15:04")
-	}
-
-	return fmt.Sprintf("%d", ts)
+	return fmt.Sprintf("%v", value) // Default case
 }

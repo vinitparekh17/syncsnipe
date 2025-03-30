@@ -2,8 +2,10 @@ package core
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/vinitparekh17/syncsnipe/internal/database"
 )
@@ -12,6 +14,7 @@ type SyncService interface {
 	AddSyncRule(ctx context.Context, profileName, sourceDir, targetDir string) error
 	ListSyncRules(ctx context.Context) ([]database.ListSyncRulesGroupByProfileRow, error)
 	RemoveSyncRuleByProfile(ctx context.Context, profileName, sourceDir string) error
+	GetSyncStatusByProfileName(ctx context.Context, profileName string) (database.GetSyncStatusByProfileNameRow, error)
 }
 
 type Sync struct {
@@ -28,8 +31,19 @@ func (s *Sync) AddSyncRule(ctx context.Context, profileName, sourceDir, targetDi
 		return errors.New("source directory and target directory must be different")
 	}
 
+	if !checkIsDirExists(sourceDir) {
+		return fmt.Errorf("source directory '%s' does not exist", sourceDir)
+	}
+
+	if !checkIsDirExists(targetDir) {
+		return fmt.Errorf("target directory '%s' does not exist", targetDir)
+	}
+
 	profile, err := s.DB.GetProfileByName(ctx, profileName)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("profile with name '%s' does not exist", profileName)
+		}
 		return err
 	}
 
@@ -63,8 +77,24 @@ func (s *Sync) RemoveSyncRuleByProfile(ctx context.Context, profileName, sourceD
 	}
 
 	if rows == 0 {
-		return fmt.Errorf("no sync rule found on '%s' profile", profileName)
+		return fmt.Errorf("no sync rule found on '%s' profile for source directory '%s'", profileName, sourceDir)
 	}
 
 	return nil
+}
+
+func (s *Sync) GetSyncStatusByProfileName(ctx context.Context, profileName string) (database.GetSyncStatusByProfileNameRow, error) {
+	syncRule, err := s.DB.GetSyncStatusByProfileName(ctx, profileName)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return database.GetSyncStatusByProfileNameRow{}, fmt.Errorf("no sync rule found on '%s' profile", profileName)
+		}
+		return database.GetSyncStatusByProfileNameRow{}, err
+	}
+	return syncRule, nil
+}
+
+func checkIsDirExists(dir string) bool {
+	_, err := os.Stat(dir)
+	return !os.IsNotExist(err)
 }

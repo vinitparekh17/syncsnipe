@@ -65,8 +65,8 @@ func (q *Queries) AddIgnorePattern(ctx context.Context, arg AddIgnorePatternPara
 
 const addSyncRule = `-- name: AddSyncRule :one
 INSERT INTO sync_rules (
-  profile_id, source_dir, target_dir, enabled, created_at, updated_at
-) VALUES ( ?, ?, ?, ?, strftime('%s', 'now'), strftime('%s', 'now'))
+  profile_id, source_dir, target_dir, created_at, updated_at
+) VALUES ( ?, ?, ?, strftime('%s', 'now'), strftime('%s', 'now'))
 RETURNING id
 `
 
@@ -74,16 +74,10 @@ type AddSyncRuleParams struct {
 	ProfileID int64  `json:"profile_id"`
 	SourceDir string `json:"source_dir"`
 	TargetDir string `json:"target_dir"`
-	Enabled   bool   `json:"enabled"`
 }
 
 func (q *Queries) AddSyncRule(ctx context.Context, arg AddSyncRuleParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, addSyncRule,
-		arg.ProfileID,
-		arg.SourceDir,
-		arg.TargetDir,
-		arg.Enabled,
-	)
+	row := q.db.QueryRowContext(ctx, addSyncRule, arg.ProfileID, arg.SourceDir, arg.TargetDir)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -266,7 +260,7 @@ func (q *Queries) GetProfileByName(ctx context.Context, name string) (Profile, e
 const getProfileIDBySourceDir = `-- name: GetProfileIDBySourceDir :one
 SELECT profile_id
   FROM sync_rules
-  WHERE source_dir = ? AND enabled = 1
+  WHERE source_dir = ? AND status IS NOT 'disabled'
   LIMIT 1
 `
 
@@ -278,7 +272,7 @@ func (q *Queries) GetProfileIDBySourceDir(ctx context.Context, sourceDir string)
 }
 
 const getSyncRule = `-- name: GetSyncRule :one
-SELECT id, profile_id, source_dir, target_dir, enabled, last_run, last_run_successful, created_at, updated_at
+SELECT id, profile_id, source_dir, target_dir, status, last_run_successful, created_at, updated_at
   FROM sync_rules
   WHERE id = ?
 `
@@ -291,8 +285,44 @@ func (q *Queries) GetSyncRule(ctx context.Context, id int64) (SyncRule, error) {
 		&i.ProfileID,
 		&i.SourceDir,
 		&i.TargetDir,
-		&i.Enabled,
-		&i.LastRun,
+		&i.Status,
+		&i.LastRunSuccessful,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getSyncStatusByProfileName = `-- name: GetSyncStatusByProfileName :one
+SELECT p.name as profile_name,
+  sr.id, sr.profile_id, sr.source_dir, sr.target_dir, sr.status, sr.last_run_successful, sr.created_at, sr.updated_at
+  FROM sync_rules sr
+  JOIN profiles p ON sr.profile_id = p.id
+  WHERE p.name = ?
+`
+
+type GetSyncStatusByProfileNameRow struct {
+	ProfileName       string       `json:"profile_name"`
+	ID                int64        `json:"id"`
+	ProfileID         int64        `json:"profile_id"`
+	SourceDir         string       `json:"source_dir"`
+	TargetDir         string       `json:"target_dir"`
+	Status            string       `json:"status"`
+	LastRunSuccessful sql.NullBool `json:"last_run_successful"`
+	CreatedAt         int64        `json:"created_at"`
+	UpdatedAt         int64        `json:"updated_at"`
+}
+
+func (q *Queries) GetSyncStatusByProfileName(ctx context.Context, name string) (GetSyncStatusByProfileNameRow, error) {
+	row := q.db.QueryRowContext(ctx, getSyncStatusByProfileName, name)
+	var i GetSyncStatusByProfileNameRow
+	err := row.Scan(
+		&i.ProfileName,
+		&i.ID,
+		&i.ProfileID,
+		&i.SourceDir,
+		&i.TargetDir,
+		&i.Status,
 		&i.LastRunSuccessful,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -420,9 +450,9 @@ func (q *Queries) ListProfiles(ctx context.Context) ([]Profile, error) {
 }
 
 const listSyncRules = `-- name: ListSyncRules :many
-SELECT id, profile_id, source_dir, target_dir, enabled, last_run, last_run_successful, created_at, updated_at
+SELECT id, profile_id, source_dir, target_dir, status, last_run_successful, created_at, updated_at
   FROM sync_rules
-  WHERE profile_id = ? AND enabled = 1
+  WHERE profile_id = ? AND status IS NOT 'disabled'
   ORDER BY source_dir
 `
 
@@ -440,8 +470,7 @@ func (q *Queries) ListSyncRules(ctx context.Context, profileID int64) ([]SyncRul
 			&i.ProfileID,
 			&i.SourceDir,
 			&i.TargetDir,
-			&i.Enabled,
-			&i.LastRun,
+			&i.Status,
 			&i.LastRunSuccessful,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -467,7 +496,6 @@ SELECT sr.profile_id as pid,
   sr.target_dir
   FROM sync_rules sr
   JOIN profiles p ON sr.profile_id = p.id
-  -- WHERE sr.enabled = 1
   GROUP BY sr.profile_id
   ORDER BY sr.profile_id
 `
@@ -615,18 +643,18 @@ func (q *Queries) UpdateProfileByName(ctx context.Context, arg UpdateProfileByNa
 
 const updateSyncRule = `-- name: UpdateSyncRule :exec
 UPDATE sync_rules
-  SET enabled = ?, last_run_successful = ?, updated_at = strftime('%s', 'now')
+  SET status = ?, last_run_successful = ?, updated_at = strftime('%s', 'now')
   WHERE id = ?
 `
 
 type UpdateSyncRuleParams struct {
-	Enabled           bool         `json:"enabled"`
+	Status            string       `json:"status"`
 	LastRunSuccessful sql.NullBool `json:"last_run_successful"`
 	ID                int64        `json:"id"`
 }
 
 func (q *Queries) UpdateSyncRule(ctx context.Context, arg UpdateSyncRuleParams) error {
-	_, err := q.db.ExecContext(ctx, updateSyncRule, arg.Enabled, arg.LastRunSuccessful, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateSyncRule, arg.Status, arg.LastRunSuccessful, arg.ID)
 	return err
 }
 

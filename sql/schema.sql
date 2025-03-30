@@ -26,12 +26,13 @@ CREATE TABLE IF NOT EXISTS sync_rules (
     profile_id INTEGER NOT NULL,
     source_dir TEXT NOT NULL UNIQUE,
     target_dir TEXT NOT NULL,
-    enabled BOOLEAN NOT NULL DEFAULT 1,
-    last_run INTEGER,
+    status TEXT NOT NULL DEFAULT 'idle',
     last_run_successful BOOLEAN DEFAULT NULL, -- Track success or failure of last run
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    UNIQUE(profile_id, source_dir),
     CHECK (source_dir != target_dir),
+    CHECK(status IN ('active', 'idle', 'scheduled', 'paused', 'disabled')),
     FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 
@@ -61,5 +62,5 @@ CREATE INDEX IF NOT EXISTS idx_files_source_path ON files(source_path);
 CREATE INDEX IF NOT EXISTS idx_files_target_path ON files(target_path);
 CREATE INDEX IF NOT EXISTS idx_conflicts_source_path ON conflicts(source_path);
 CREATE INDEX IF NOT EXISTS idx_conflicts_detected_at ON conflicts(detected_at);
-CREATE INDEX IF NOT EXISTS idx_sync_rules_enabled ON sync_rules(enabled);
+CREATE INDEX IF NOT EXISTS idx_sync_rules_status ON sync_rules(status);
 CREATE INDEX IF NOT EXISTS idx_sync_rules_source_dir ON sync_rules(source_dir);

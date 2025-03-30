@@ -44,8 +44,8 @@ DELETE FROM profiles
 
 -- name: AddSyncRule :one
 INSERT INTO sync_rules (
-  profile_id, source_dir, target_dir, enabled, created_at, updated_at
-) VALUES ( ?, ?, ?, ?, strftime('%s', 'now'), strftime('%s', 'now'))
+  profile_id, source_dir, target_dir, created_at, updated_at
+) VALUES ( ?, ?, ?, strftime('%s', 'now'), strftime('%s', 'now'))
 RETURNING id;
 
 -- name: GetSyncRule :one
@@ -53,16 +53,28 @@ SELECT *
   FROM sync_rules
   WHERE id = ?;
 
+-- name: GetSyncStatusByProfileName :one
+SELECT sr.id,
+  p.name as profile_name,
+  sr.source_dir,
+  sr.target_dir,
+  sr.status,
+  sr.created_at,
+  sr.updated_at
+  FROM sync_rules sr
+  JOIN profiles p ON sr.profile_id = p.id
+  WHERE p.name = ?;
+
 -- name: GetProfileIDBySourceDir :one
 SELECT profile_id
   FROM sync_rules
-  WHERE source_dir = ? AND enabled = 1
+  WHERE source_dir = ? AND status IS NOT 'disabled'
   LIMIT 1;
 
 -- name: ListSyncRules :many
 SELECT *
   FROM sync_rules
-  WHERE profile_id = ? AND enabled = 1
+  WHERE profile_id = ? AND status IS NOT 'disabled'
   ORDER BY source_dir;
 
 -- name: ListSyncRulesGroupByProfile :many
@@ -73,13 +85,12 @@ SELECT sr.profile_id as pid,
   sr.target_dir
   FROM sync_rules sr
   JOIN profiles p ON sr.profile_id = p.id
-  -- WHERE sr.enabled = 1
   GROUP BY sr.profile_id
   ORDER BY sr.profile_id;
 
 -- name: UpdateSyncRule :exec
 UPDATE sync_rules
-  SET enabled = ?, last_run_successful = ?, updated_at = strftime('%s', 'now')
+  SET status = ?, last_run_successful = ?, updated_at = strftime('%s', 'now')
   WHERE id = ?;
 
 -- name: DeleteSyncRuleByProfileName :execrows
