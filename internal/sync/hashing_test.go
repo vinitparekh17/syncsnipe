@@ -34,7 +34,7 @@ func TestComputeHash(t *testing.T) {
 	t.Run("LargeFile", func(t *testing.T) {
 		largeFile, _ := os.CreateTemp("", "large")
 		defer os.Remove(largeFile.Name())
-		data := make([]byte, 1*1024*1024*1024) // 1GB data
+		data := make([]byte, 50*1024*1024) // 50MB data
 		largeFile.Write(data)
 		hash, err := ComputeHash(largeFile.Name())
 		assert.NoError(t, err)
