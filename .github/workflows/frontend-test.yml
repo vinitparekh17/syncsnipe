@@ -2,22 +2,15 @@ name: syncsnipe-frontend-test-suite
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "**.go"
-      - "**.sql"
-      - "go.*"
-      - "docs/**"
-      - "**.md"
-      - "**.txt"
+    paths:
+      # Will ignore everything except frontend dir and Makefile
+      - "frontend/**"
+      - "Makefile"
   pull_request:
     branches: [main]
-    paths-ignore:
-      - "**.go"
-      - "**.sql"
-      - "go.*"
-      - "docs/**"
-      - "**.md"
-      - "**.txt"
+    paths:
+      - "frontend/**"
+      - "Makefile"
 
 jobs:
   test:
