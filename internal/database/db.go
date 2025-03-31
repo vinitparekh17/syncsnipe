@@ -7,6 +7,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"fmt"
 )
 
 type DBTX interface {
@@ -20,12 +21,348 @@ func New(db DBTX) *Queries {
 	return &Queries{db: db}
 }
 
+func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
+	q := Queries{db: db}
+	var err error
+	if q.addConflictStmt, err = db.PrepareContext(ctx, addConflict); err != nil {
+		return nil, fmt.Errorf("error preparing query AddConflict: %w", err)
+	}
+	if q.addIgnorePatternStmt, err = db.PrepareContext(ctx, addIgnorePattern); err != nil {
+		return nil, fmt.Errorf("error preparing query AddIgnorePattern: %w", err)
+	}
+	if q.addSyncRuleStmt, err = db.PrepareContext(ctx, addSyncRule); err != nil {
+		return nil, fmt.Errorf("error preparing query AddSyncRule: %w", err)
+	}
+	if q.createProfileStmt, err = db.PrepareContext(ctx, createProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateProfile: %w", err)
+	}
+	if q.deleteFileStmt, err = db.PrepareContext(ctx, deleteFile); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteFile: %w", err)
+	}
+	if q.deleteProfileByIDStmt, err = db.PrepareContext(ctx, deleteProfileByID); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteProfileByID: %w", err)
+	}
+	if q.deleteProfileByNameStmt, err = db.PrepareContext(ctx, deleteProfileByName); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteProfileByName: %w", err)
+	}
+	if q.deleteSyncRuleByProfileNameStmt, err = db.PrepareContext(ctx, deleteSyncRuleByProfileName); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteSyncRuleByProfileName: %w", err)
+	}
+	if q.getConflictStmt, err = db.PrepareContext(ctx, getConflict); err != nil {
+		return nil, fmt.Errorf("error preparing query GetConflict: %w", err)
+	}
+	if q.getFileStmt, err = db.PrepareContext(ctx, getFile); err != nil {
+		return nil, fmt.Errorf("error preparing query GetFile: %w", err)
+	}
+	if q.getIgnorePatternStmt, err = db.PrepareContext(ctx, getIgnorePattern); err != nil {
+		return nil, fmt.Errorf("error preparing query GetIgnorePattern: %w", err)
+	}
+	if q.getProfileStmt, err = db.PrepareContext(ctx, getProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query GetProfile: %w", err)
+	}
+	if q.getProfileByNameStmt, err = db.PrepareContext(ctx, getProfileByName); err != nil {
+		return nil, fmt.Errorf("error preparing query GetProfileByName: %w", err)
+	}
+	if q.getProfileIDBySourceDirStmt, err = db.PrepareContext(ctx, getProfileIDBySourceDir); err != nil {
+		return nil, fmt.Errorf("error preparing query GetProfileIDBySourceDir: %w", err)
+	}
+	if q.getSyncRuleStmt, err = db.PrepareContext(ctx, getSyncRule); err != nil {
+		return nil, fmt.Errorf("error preparing query GetSyncRule: %w", err)
+	}
+	if q.getSyncStatusByProfileNameStmt, err = db.PrepareContext(ctx, getSyncStatusByProfileName); err != nil {
+		return nil, fmt.Errorf("error preparing query GetSyncStatusByProfileName: %w", err)
+	}
+	if q.isProfileExistsStmt, err = db.PrepareContext(ctx, isProfileExists); err != nil {
+		return nil, fmt.Errorf("error preparing query IsProfileExists: %w", err)
+	}
+	if q.listFilesStmt, err = db.PrepareContext(ctx, listFiles); err != nil {
+		return nil, fmt.Errorf("error preparing query ListFiles: %w", err)
+	}
+	if q.listIgnorePatternStmt, err = db.PrepareContext(ctx, listIgnorePattern); err != nil {
+		return nil, fmt.Errorf("error preparing query ListIgnorePattern: %w", err)
+	}
+	if q.listProfilesStmt, err = db.PrepareContext(ctx, listProfiles); err != nil {
+		return nil, fmt.Errorf("error preparing query ListProfiles: %w", err)
+	}
+	if q.listSyncRulesStmt, err = db.PrepareContext(ctx, listSyncRules); err != nil {
+		return nil, fmt.Errorf("error preparing query ListSyncRules: %w", err)
+	}
+	if q.listSyncRulesGroupByProfileStmt, err = db.PrepareContext(ctx, listSyncRulesGroupByProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query ListSyncRulesGroupByProfile: %w", err)
+	}
+	if q.listUnresolvedConflictsStmt, err = db.PrepareContext(ctx, listUnresolvedConflicts); err != nil {
+		return nil, fmt.Errorf("error preparing query ListUnresolvedConflicts: %w", err)
+	}
+	if q.removeIgnorePatternStmt, err = db.PrepareContext(ctx, removeIgnorePattern); err != nil {
+		return nil, fmt.Errorf("error preparing query RemoveIgnorePattern: %w", err)
+	}
+	if q.resolveConflictStmt, err = db.PrepareContext(ctx, resolveConflict); err != nil {
+		return nil, fmt.Errorf("error preparing query ResolveConflict: %w", err)
+	}
+	if q.updateProfileByIDStmt, err = db.PrepareContext(ctx, updateProfileByID); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateProfileByID: %w", err)
+	}
+	if q.updateProfileByNameStmt, err = db.PrepareContext(ctx, updateProfileByName); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateProfileByName: %w", err)
+	}
+	if q.updateSyncRuleStmt, err = db.PrepareContext(ctx, updateSyncRule); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateSyncRule: %w", err)
+	}
+	if q.upsertFileStmt, err = db.PrepareContext(ctx, upsertFile); err != nil {
+		return nil, fmt.Errorf("error preparing query UpsertFile: %w", err)
+	}
+	return &q, nil
+}
+
+func (q *Queries) Close() error {
+	var err error
+	if q.addConflictStmt != nil {
+		if cerr := q.addConflictStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addConflictStmt: %w", cerr)
+		}
+	}
+	if q.addIgnorePatternStmt != nil {
+		if cerr := q.addIgnorePatternStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addIgnorePatternStmt: %w", cerr)
+		}
+	}
+	if q.addSyncRuleStmt != nil {
+		if cerr := q.addSyncRuleStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing addSyncRuleStmt: %w", cerr)
+		}
+	}
+	if q.createProfileStmt != nil {
+		if cerr := q.createProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createProfileStmt: %w", cerr)
+		}
+	}
+	if q.deleteFileStmt != nil {
+		if cerr := q.deleteFileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteFileStmt: %w", cerr)
+		}
+	}
+	if q.deleteProfileByIDStmt != nil {
+		if cerr := q.deleteProfileByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteProfileByIDStmt: %w", cerr)
+		}
+	}
+	if q.deleteProfileByNameStmt != nil {
+		if cerr := q.deleteProfileByNameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteProfileByNameStmt: %w", cerr)
+		}
+	}
+	if q.deleteSyncRuleByProfileNameStmt != nil {
+		if cerr := q.deleteSyncRuleByProfileNameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteSyncRuleByProfileNameStmt: %w", cerr)
+		}
+	}
+	if q.getConflictStmt != nil {
+		if cerr := q.getConflictStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getConflictStmt: %w", cerr)
+		}
+	}
+	if q.getFileStmt != nil {
+		if cerr := q.getFileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getFileStmt: %w", cerr)
+		}
+	}
+	if q.getIgnorePatternStmt != nil {
+		if cerr := q.getIgnorePatternStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getIgnorePatternStmt: %w", cerr)
+		}
+	}
+	if q.getProfileStmt != nil {
+		if cerr := q.getProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getProfileStmt: %w", cerr)
+		}
+	}
+	if q.getProfileByNameStmt != nil {
+		if cerr := q.getProfileByNameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getProfileByNameStmt: %w", cerr)
+		}
+	}
+	if q.getProfileIDBySourceDirStmt != nil {
+		if cerr := q.getProfileIDBySourceDirStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getProfileIDBySourceDirStmt: %w", cerr)
+		}
+	}
+	if q.getSyncRuleStmt != nil {
+		if cerr := q.getSyncRuleStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getSyncRuleStmt: %w", cerr)
+		}
+	}
+	if q.getSyncStatusByProfileNameStmt != nil {
+		if cerr := q.getSyncStatusByProfileNameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getSyncStatusByProfileNameStmt: %w", cerr)
+		}
+	}
+	if q.isProfileExistsStmt != nil {
+		if cerr := q.isProfileExistsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing isProfileExistsStmt: %w", cerr)
+		}
+	}
+	if q.listFilesStmt != nil {
+		if cerr := q.listFilesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listFilesStmt: %w", cerr)
+		}
+	}
+	if q.listIgnorePatternStmt != nil {
+		if cerr := q.listIgnorePatternStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listIgnorePatternStmt: %w", cerr)
+		}
+	}
+	if q.listProfilesStmt != nil {
+		if cerr := q.listProfilesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listProfilesStmt: %w", cerr)
+		}
+	}
+	if q.listSyncRulesStmt != nil {
+		if cerr := q.listSyncRulesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listSyncRulesStmt: %w", cerr)
+		}
+	}
+	if q.listSyncRulesGroupByProfileStmt != nil {
+		if cerr := q.listSyncRulesGroupByProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listSyncRulesGroupByProfileStmt: %w", cerr)
+		}
+	}
+	if q.listUnresolvedConflictsStmt != nil {
+		if cerr := q.listUnresolvedConflictsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listUnresolvedConflictsStmt: %w", cerr)
+		}
+	}
+	if q.removeIgnorePatternStmt != nil {
+		if cerr := q.removeIgnorePatternStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing removeIgnorePatternStmt: %w", cerr)
+		}
+	}
+	if q.resolveConflictStmt != nil {
+		if cerr := q.resolveConflictStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing resolveConflictStmt: %w", cerr)
+		}
+	}
+	if q.updateProfileByIDStmt != nil {
+		if cerr := q.updateProfileByIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateProfileByIDStmt: %w", cerr)
+		}
+	}
+	if q.updateProfileByNameStmt != nil {
+		if cerr := q.updateProfileByNameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateProfileByNameStmt: %w", cerr)
+		}
+	}
+	if q.updateSyncRuleStmt != nil {
+		if cerr := q.updateSyncRuleStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateSyncRuleStmt: %w", cerr)
+		}
+	}
+	if q.upsertFileStmt != nil {
+		if cerr := q.upsertFileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing upsertFileStmt: %w", cerr)
+		}
+	}
+	return err
+}
+
+func (q *Queries) exec(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (sql.Result, error) {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).ExecContext(ctx, args...)
+	case stmt != nil:
+		return stmt.ExecContext(ctx, args...)
+	default:
+		return q.db.ExecContext(ctx, query, args...)
+	}
+}
+
+func (q *Queries) query(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (*sql.Rows, error) {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).QueryContext(ctx, args...)
+	case stmt != nil:
+		return stmt.QueryContext(ctx, args...)
+	default:
+		return q.db.QueryContext(ctx, query, args...)
+	}
+}
+
+func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) *sql.Row {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).QueryRowContext(ctx, args...)
+	case stmt != nil:
+		return stmt.QueryRowContext(ctx, args...)
+	default:
+		return q.db.QueryRowContext(ctx, query, args...)
+	}
+}
+
 type Queries struct {
-	db DBTX
+	db                              DBTX
+	tx                              *sql.Tx
+	addConflictStmt                 *sql.Stmt
+	addIgnorePatternStmt            *sql.Stmt
+	addSyncRuleStmt                 *sql.Stmt
+	createProfileStmt               *sql.Stmt
+	deleteFileStmt                  *sql.Stmt
+	deleteProfileByIDStmt           *sql.Stmt
+	deleteProfileByNameStmt         *sql.Stmt
+	deleteSyncRuleByProfileNameStmt *sql.Stmt
+	getConflictStmt                 *sql.Stmt
+	getFileStmt                     *sql.Stmt
+	getIgnorePatternStmt            *sql.Stmt
+	getProfileStmt                  *sql.Stmt
+	getProfileByNameStmt            *sql.Stmt
+	getProfileIDBySourceDirStmt     *sql.Stmt
+	getSyncRuleStmt                 *sql.Stmt
+	getSyncStatusByProfileNameStmt  *sql.Stmt
+	isProfileExistsStmt             *sql.Stmt
+	listFilesStmt                   *sql.Stmt
+	listIgnorePatternStmt           *sql.Stmt
+	listProfilesStmt                *sql.Stmt
+	listSyncRulesStmt               *sql.Stmt
+	listSyncRulesGroupByProfileStmt *sql.Stmt
+	listUnresolvedConflictsStmt     *sql.Stmt
+	removeIgnorePatternStmt         *sql.Stmt
+	resolveConflictStmt             *sql.Stmt
+	updateProfileByIDStmt           *sql.Stmt
+	updateProfileByNameStmt         *sql.Stmt
+	updateSyncRuleStmt              *sql.Stmt
+	upsertFileStmt                  *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db: tx,
+		db:                              tx,
+		tx:                              tx,
+		addConflictStmt:                 q.addConflictStmt,
+		addIgnorePatternStmt:            q.addIgnorePatternStmt,
+		addSyncRuleStmt:                 q.addSyncRuleStmt,
+		createProfileStmt:               q.createProfileStmt,
+		deleteFileStmt:                  q.deleteFileStmt,
+		deleteProfileByIDStmt:           q.deleteProfileByIDStmt,
+		deleteProfileByNameStmt:         q.deleteProfileByNameStmt,
+		deleteSyncRuleByProfileNameStmt: q.deleteSyncRuleByProfileNameStmt,
+		getConflictStmt:                 q.getConflictStmt,
+		getFileStmt:                     q.getFileStmt,
+		getIgnorePatternStmt:            q.getIgnorePatternStmt,
+		getProfileStmt:                  q.getProfileStmt,
+		getProfileByNameStmt:            q.getProfileByNameStmt,
+		getProfileIDBySourceDirStmt:     q.getProfileIDBySourceDirStmt,
+		getSyncRuleStmt:                 q.getSyncRuleStmt,
+		getSyncStatusByProfileNameStmt:  q.getSyncStatusByProfileNameStmt,
+		isProfileExistsStmt:             q.isProfileExistsStmt,
+		listFilesStmt:                   q.listFilesStmt,
+		listIgnorePatternStmt:           q.listIgnorePatternStmt,
+		listProfilesStmt:                q.listProfilesStmt,
+		listSyncRulesStmt:               q.listSyncRulesStmt,
+		listSyncRulesGroupByProfileStmt: q.listSyncRulesGroupByProfileStmt,
+		listUnresolvedConflictsStmt:     q.listUnresolvedConflictsStmt,
+		removeIgnorePatternStmt:         q.removeIgnorePatternStmt,
+		resolveConflictStmt:             q.resolveConflictStmt,
+		updateProfileByIDStmt:           q.updateProfileByIDStmt,
+		updateProfileByNameStmt:         q.updateProfileByNameStmt,
+		updateSyncRuleStmt:              q.updateSyncRuleStmt,
+		upsertFileStmt:                  q.upsertFileStmt,
 	}
 }

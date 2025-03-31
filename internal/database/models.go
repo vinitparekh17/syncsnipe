@@ -6,34 +6,36 @@ package database
 
 import (
 	"database/sql"
+
+	"github.com/vinitparekh17/syncsnipe/internal/types"
 )
 
 type Conflict struct {
 	ID               int64          `json:"id"`
-	SourcePath       string         `json:"source_path"`
-	TargetPath       string         `json:"target_path"`
-	SourceHash       string         `json:"source_hash"`
-	TargetHash       string         `json:"target_hash"`
-	SourceTime       int64          `json:"source_time"`
-	TargetTime       int64          `json:"target_time"`
-	DetectedAt       int64          `json:"detected_at"`
-	ResolutionStatus sql.NullString `json:"resolution_status"`
-	ResolvedAt       sql.NullInt64  `json:"resolved_at"`
+	SourcePath       string         `json:"sourcePath"`
+	TargetPath       string         `json:"targetPath"`
+	SourceHash       string         `json:"sourceHash"`
+	TargetHash       string         `json:"targetHash"`
+	SourceTime       int64          `json:"sourceTime"`
+	TargetTime       int64          `json:"targetTime"`
+	DetectedAt       int64          `json:"detectedAt"`
+	ResolutionStatus sql.NullString `json:"resolutionStatus"`
+	ResolvedAt       sql.NullInt64  `json:"resolvedAt"`
 }
 
 type File struct {
 	ID         int64  `json:"id"`
-	SourcePath string `json:"source_path"`
-	TargetPath string `json:"target_path"`
+	SourcePath string `json:"sourcePath"`
+	TargetPath string `json:"targetPath"`
 	Hash       string `json:"hash"`
 	Size       int64  `json:"size"`
-	ModTime    int64  `json:"mod_time"`
-	LastSynced int64  `json:"last_synced"`
+	ModTime    int64  `json:"modTime"`
+	LastSynced int64  `json:"lastSynced"`
 }
 
 type IgnorePattern struct {
 	ID        int64  `json:"id"`
-	ProfileID int64  `json:"profile_id"`
+	ProfileID int64  `json:"profileId"`
 	Pattern   string `json:"pattern"`
 	Type      string `json:"type"`
 }
@@ -41,17 +43,17 @@ type IgnorePattern struct {
 type Profile struct {
 	ID        int64  `json:"id"`
 	Name      string `json:"name"`
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
+	CreatedAt int64  `json:"createdAt"`
+	UpdatedAt int64  `json:"updatedAt"`
 }
 
 type SyncRule struct {
 	ID                int64        `json:"id"`
-	ProfileID         int64        `json:"profile_id"`
-	SourceDir         string       `json:"source_dir"`
-	TargetDir         string       `json:"target_dir"`
-	Status            string       `json:"status"`
-	LastRunSuccessful sql.NullBool `json:"last_run_successful"`
-	CreatedAt         int64        `json:"created_at"`
-	UpdatedAt         int64        `json:"updated_at"`
+	ProfileID         int64        `json:"profileId"`
+	SourceDir         string       `json:"sourceDir"`
+	TargetDir         string       `json:"targetDir"`
+	Status            types.Status `json:"status"`
+	LastRunSuccessful sql.NullBool `json:"lastRunSuccessful"`
+	CreatedAt         int64        `json:"createdAt"`
+	UpdatedAt         int64        `json:"updatedAt"`
 }

@@ -26,13 +26,13 @@ CREATE TABLE IF NOT EXISTS sync_rules (
     profile_id INTEGER NOT NULL,
     source_dir TEXT NOT NULL UNIQUE,
     target_dir TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'idle',
+    status INTEGER NOT NULL DEFAULT 1,
     last_run_successful BOOLEAN DEFAULT NULL, -- Track success or failure of last run
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     UNIQUE(profile_id, source_dir),
     CHECK (source_dir != target_dir),
-    CHECK(status IN ('active', 'idle', 'scheduled', 'paused', 'disabled')),
+    CHECK(status IN (0, 1, 2, 3, 4)), -- 0: active, 1: idle, 2: scheduled, 3: paused, 4: disabled
     FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 

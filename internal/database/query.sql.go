@@ -8,6 +8,8 @@ package database
 import (
 	"context"
 	"database/sql"
+
+	"github.com/vinitparekh17/syncsnipe/internal/types"
 )
 
 const addConflict = `-- name: AddConflict :one
@@ -19,17 +21,17 @@ RETURNING id
 `
 
 type AddConflictParams struct {
-	SourcePath string `json:"source_path"`
-	TargetPath string `json:"target_path"`
-	SourceHash string `json:"source_hash"`
-	TargetHash string `json:"target_hash"`
-	SourceTime int64  `json:"source_time"`
-	TargetTime int64  `json:"target_time"`
-	DetectedAt int64  `json:"detected_at"`
+	SourcePath string `json:"sourcePath"`
+	TargetPath string `json:"targetPath"`
+	SourceHash string `json:"sourceHash"`
+	TargetHash string `json:"targetHash"`
+	SourceTime int64  `json:"sourceTime"`
+	TargetTime int64  `json:"targetTime"`
+	DetectedAt int64  `json:"detectedAt"`
 }
 
 func (q *Queries) AddConflict(ctx context.Context, arg AddConflictParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, addConflict,
+	row := q.queryRow(ctx, q.addConflictStmt, addConflict,
 		arg.SourcePath,
 		arg.TargetPath,
 		arg.SourceHash,
@@ -51,13 +53,13 @@ RETURNING id
 `
 
 type AddIgnorePatternParams struct {
-	ProfileID int64  `json:"profile_id"`
+	ProfileID int64  `json:"profileId"`
 	Pattern   string `json:"pattern"`
 	Type      string `json:"type"`
 }
 
 func (q *Queries) AddIgnorePattern(ctx context.Context, arg AddIgnorePatternParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, addIgnorePattern, arg.ProfileID, arg.Pattern, arg.Type)
+	row := q.queryRow(ctx, q.addIgnorePatternStmt, addIgnorePattern, arg.ProfileID, arg.Pattern, arg.Type)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -71,13 +73,13 @@ RETURNING id
 `
 
 type AddSyncRuleParams struct {
-	ProfileID int64  `json:"profile_id"`
-	SourceDir string `json:"source_dir"`
-	TargetDir string `json:"target_dir"`
+	ProfileID int64  `json:"profileId"`
+	SourceDir string `json:"sourceDir"`
+	TargetDir string `json:"targetDir"`
 }
 
 func (q *Queries) AddSyncRule(ctx context.Context, arg AddSyncRuleParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, addSyncRule, arg.ProfileID, arg.SourceDir, arg.TargetDir)
+	row := q.queryRow(ctx, q.addSyncRuleStmt, addSyncRule, arg.ProfileID, arg.SourceDir, arg.TargetDir)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -91,7 +93,7 @@ RETURNING id
 `
 
 func (q *Queries) CreateProfile(ctx context.Context, name string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createProfile, name)
+	row := q.queryRow(ctx, q.createProfileStmt, createProfile, name)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -103,12 +105,12 @@ DELETE FROM files
 `
 
 type DeleteFileParams struct {
-	SourcePath string `json:"source_path"`
-	TargetPath string `json:"target_path"`
+	SourcePath string `json:"sourcePath"`
+	TargetPath string `json:"targetPath"`
 }
 
 func (q *Queries) DeleteFile(ctx context.Context, arg DeleteFileParams) error {
-	_, err := q.db.ExecContext(ctx, deleteFile, arg.SourcePath, arg.TargetPath)
+	_, err := q.exec(ctx, q.deleteFileStmt, deleteFile, arg.SourcePath, arg.TargetPath)
 	return err
 }
 
@@ -118,7 +120,7 @@ DELETE FROM profiles
 `
 
 func (q *Queries) DeleteProfileByID(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteProfileByID, id)
+	_, err := q.exec(ctx, q.deleteProfileByIDStmt, deleteProfileByID, id)
 	return err
 }
 
@@ -128,7 +130,7 @@ DELETE FROM profiles
 `
 
 func (q *Queries) DeleteProfileByName(ctx context.Context, name string) (int64, error) {
-	result, err := q.db.ExecContext(ctx, deleteProfileByName, name)
+	result, err := q.exec(ctx, q.deleteProfileByNameStmt, deleteProfileByName, name)
 	if err != nil {
 		return 0, err
 	}
@@ -142,11 +144,11 @@ DELETE FROM sync_rules
 
 type DeleteSyncRuleByProfileNameParams struct {
 	Name      string `json:"name"`
-	SourceDir string `json:"source_dir"`
+	SourceDir string `json:"sourceDir"`
 }
 
 func (q *Queries) DeleteSyncRuleByProfileName(ctx context.Context, arg DeleteSyncRuleByProfileNameParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, deleteSyncRuleByProfileName, arg.Name, arg.SourceDir)
+	result, err := q.exec(ctx, q.deleteSyncRuleByProfileNameStmt, deleteSyncRuleByProfileName, arg.Name, arg.SourceDir)
 	if err != nil {
 		return 0, err
 	}
@@ -160,7 +162,7 @@ SELECT id, source_path, target_path, source_hash, target_hash, source_time, targ
 `
 
 func (q *Queries) GetConflict(ctx context.Context, id int64) (Conflict, error) {
-	row := q.db.QueryRowContext(ctx, getConflict, id)
+	row := q.queryRow(ctx, q.getConflictStmt, getConflict, id)
 	var i Conflict
 	err := row.Scan(
 		&i.ID,
@@ -184,12 +186,12 @@ SELECT id, source_path, target_path, hash, size, mod_time, last_synced
 `
 
 type GetFileParams struct {
-	SourcePath string `json:"source_path"`
-	TargetPath string `json:"target_path"`
+	SourcePath string `json:"sourcePath"`
+	TargetPath string `json:"targetPath"`
 }
 
 func (q *Queries) GetFile(ctx context.Context, arg GetFileParams) (File, error) {
-	row := q.db.QueryRowContext(ctx, getFile, arg.SourcePath, arg.TargetPath)
+	row := q.queryRow(ctx, q.getFileStmt, getFile, arg.SourcePath, arg.TargetPath)
 	var i File
 	err := row.Scan(
 		&i.ID,
@@ -210,7 +212,7 @@ SELECT id, profile_id, pattern, type
 `
 
 func (q *Queries) GetIgnorePattern(ctx context.Context, id int64) (IgnorePattern, error) {
-	row := q.db.QueryRowContext(ctx, getIgnorePattern, id)
+	row := q.queryRow(ctx, q.getIgnorePatternStmt, getIgnorePattern, id)
 	var i IgnorePattern
 	err := row.Scan(
 		&i.ID,
@@ -228,7 +230,7 @@ SELECT id, name, created_at, updated_at
 `
 
 func (q *Queries) GetProfile(ctx context.Context, id int64) (Profile, error) {
-	row := q.db.QueryRowContext(ctx, getProfile, id)
+	row := q.queryRow(ctx, q.getProfileStmt, getProfile, id)
 	var i Profile
 	err := row.Scan(
 		&i.ID,
@@ -246,7 +248,7 @@ SELECT id, name, created_at, updated_at
 `
 
 func (q *Queries) GetProfileByName(ctx context.Context, name string) (Profile, error) {
-	row := q.db.QueryRowContext(ctx, getProfileByName, name)
+	row := q.queryRow(ctx, q.getProfileByNameStmt, getProfileByName, name)
 	var i Profile
 	err := row.Scan(
 		&i.ID,
@@ -265,7 +267,7 @@ SELECT profile_id
 `
 
 func (q *Queries) GetProfileIDBySourceDir(ctx context.Context, sourceDir string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getProfileIDBySourceDir, sourceDir)
+	row := q.queryRow(ctx, q.getProfileIDBySourceDirStmt, getProfileIDBySourceDir, sourceDir)
 	var profile_id int64
 	err := row.Scan(&profile_id)
 	return profile_id, err
@@ -278,7 +280,7 @@ SELECT id, profile_id, source_dir, target_dir, status, last_run_successful, crea
 `
 
 func (q *Queries) GetSyncRule(ctx context.Context, id int64) (SyncRule, error) {
-	row := q.db.QueryRowContext(ctx, getSyncRule, id)
+	row := q.queryRow(ctx, q.getSyncRuleStmt, getSyncRule, id)
 	var i SyncRule
 	err := row.Scan(
 		&i.ID,
@@ -294,36 +296,37 @@ func (q *Queries) GetSyncRule(ctx context.Context, id int64) (SyncRule, error) {
 }
 
 const getSyncStatusByProfileName = `-- name: GetSyncStatusByProfileName :one
-SELECT p.name as profile_name,
-  sr.id, sr.profile_id, sr.source_dir, sr.target_dir, sr.status, sr.last_run_successful, sr.created_at, sr.updated_at
+SELECT sr.id,
+  p.name as profile_name,
+  sr.source_dir,
+  sr.target_dir,
+  sr.status,
+  sr.created_at,
+  sr.updated_at
   FROM sync_rules sr
   JOIN profiles p ON sr.profile_id = p.id
   WHERE p.name = ?
 `
 
 type GetSyncStatusByProfileNameRow struct {
-	ProfileName       string       `json:"profile_name"`
-	ID                int64        `json:"id"`
-	ProfileID         int64        `json:"profile_id"`
-	SourceDir         string       `json:"source_dir"`
-	TargetDir         string       `json:"target_dir"`
-	Status            string       `json:"status"`
-	LastRunSuccessful sql.NullBool `json:"last_run_successful"`
-	CreatedAt         int64        `json:"created_at"`
-	UpdatedAt         int64        `json:"updated_at"`
+	ID          int64        `json:"id"`
+	ProfileName string       `json:"profileName"`
+	SourceDir   string       `json:"sourceDir"`
+	TargetDir   string       `json:"targetDir"`
+	Status      types.Status `json:"status"`
+	CreatedAt   int64        `json:"createdAt"`
+	UpdatedAt   int64        `json:"updatedAt"`
 }
 
 func (q *Queries) GetSyncStatusByProfileName(ctx context.Context, name string) (GetSyncStatusByProfileNameRow, error) {
-	row := q.db.QueryRowContext(ctx, getSyncStatusByProfileName, name)
+	row := q.queryRow(ctx, q.getSyncStatusByProfileNameStmt, getSyncStatusByProfileName, name)
 	var i GetSyncStatusByProfileNameRow
 	err := row.Scan(
-		&i.ProfileName,
 		&i.ID,
-		&i.ProfileID,
+		&i.ProfileName,
 		&i.SourceDir,
 		&i.TargetDir,
 		&i.Status,
-		&i.LastRunSuccessful,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -337,7 +340,7 @@ SELECT COUNT(*)
 `
 
 func (q *Queries) IsProfileExists(ctx context.Context, lower string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, isProfileExists, lower)
+	row := q.queryRow(ctx, q.isProfileExistsStmt, isProfileExists, lower)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -351,12 +354,12 @@ SELECT f.id, f.source_path, f.target_path, f.hash, f.size, f.mod_time, f.last_sy
 `
 
 func (q *Queries) ListFiles(ctx context.Context, profileID int64) ([]File, error) {
-	rows, err := q.db.QueryContext(ctx, listFiles, profileID)
+	rows, err := q.query(ctx, q.listFilesStmt, listFiles, profileID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []File
+	items := []File{}
 	for rows.Next() {
 		var i File
 		if err := rows.Scan(
@@ -388,12 +391,12 @@ SELECT id, profile_id, pattern, type
 `
 
 func (q *Queries) ListIgnorePattern(ctx context.Context, profileID int64) ([]IgnorePattern, error) {
-	rows, err := q.db.QueryContext(ctx, listIgnorePattern, profileID)
+	rows, err := q.query(ctx, q.listIgnorePatternStmt, listIgnorePattern, profileID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []IgnorePattern
+	items := []IgnorePattern{}
 	for rows.Next() {
 		var i IgnorePattern
 		if err := rows.Scan(
@@ -422,12 +425,12 @@ SELECT id, name, created_at, updated_at
 `
 
 func (q *Queries) ListProfiles(ctx context.Context) ([]Profile, error) {
-	rows, err := q.db.QueryContext(ctx, listProfiles)
+	rows, err := q.query(ctx, q.listProfilesStmt, listProfiles)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Profile
+	items := []Profile{}
 	for rows.Next() {
 		var i Profile
 		if err := rows.Scan(
@@ -457,12 +460,12 @@ SELECT id, profile_id, source_dir, target_dir, status, last_run_successful, crea
 `
 
 func (q *Queries) ListSyncRules(ctx context.Context, profileID int64) ([]SyncRule, error) {
-	rows, err := q.db.QueryContext(ctx, listSyncRules, profileID)
+	rows, err := q.query(ctx, q.listSyncRulesStmt, listSyncRules, profileID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []SyncRule
+	items := []SyncRule{}
 	for rows.Next() {
 		var i SyncRule
 		if err := rows.Scan(
@@ -502,19 +505,19 @@ SELECT sr.profile_id as pid,
 
 type ListSyncRulesGroupByProfileRow struct {
 	Pid         int64  `json:"pid"`
-	ProfileName string `json:"profile_name"`
-	RuleCount   int64  `json:"rule_count"`
-	SourceDir   string `json:"source_dir"`
-	TargetDir   string `json:"target_dir"`
+	ProfileName string `json:"profileName"`
+	RuleCount   int64  `json:"ruleCount"`
+	SourceDir   string `json:"sourceDir"`
+	TargetDir   string `json:"targetDir"`
 }
 
 func (q *Queries) ListSyncRulesGroupByProfile(ctx context.Context) ([]ListSyncRulesGroupByProfileRow, error) {
-	rows, err := q.db.QueryContext(ctx, listSyncRulesGroupByProfile)
+	rows, err := q.query(ctx, q.listSyncRulesGroupByProfileStmt, listSyncRulesGroupByProfile)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListSyncRulesGroupByProfileRow
+	items := []ListSyncRulesGroupByProfileRow{}
 	for rows.Next() {
 		var i ListSyncRulesGroupByProfileRow
 		if err := rows.Scan(
@@ -546,12 +549,12 @@ SELECT c.id, c.source_path, c.target_path, c.source_hash, c.target_hash, c.sourc
 `
 
 func (q *Queries) ListUnresolvedConflicts(ctx context.Context, profileID int64) ([]Conflict, error) {
-	rows, err := q.db.QueryContext(ctx, listUnresolvedConflicts, profileID)
+	rows, err := q.query(ctx, q.listUnresolvedConflictsStmt, listUnresolvedConflicts, profileID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Conflict
+	items := []Conflict{}
 	for rows.Next() {
 		var i Conflict
 		if err := rows.Scan(
@@ -585,7 +588,7 @@ DELETE FROM ignore_patterns
 `
 
 func (q *Queries) RemoveIgnorePattern(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, removeIgnorePattern, id)
+	_, err := q.exec(ctx, q.removeIgnorePatternStmt, removeIgnorePattern, id)
 	return err
 }
 
@@ -596,13 +599,13 @@ UPDATE conflicts
 `
 
 type ResolveConflictParams struct {
-	ResolutionStatus sql.NullString `json:"resolution_status"`
-	ResolvedAt       sql.NullInt64  `json:"resolved_at"`
+	ResolutionStatus sql.NullString `json:"resolutionStatus"`
+	ResolvedAt       sql.NullInt64  `json:"resolvedAt"`
 	ID               int64          `json:"id"`
 }
 
 func (q *Queries) ResolveConflict(ctx context.Context, arg ResolveConflictParams) error {
-	_, err := q.db.ExecContext(ctx, resolveConflict, arg.ResolutionStatus, arg.ResolvedAt, arg.ID)
+	_, err := q.exec(ctx, q.resolveConflictStmt, resolveConflict, arg.ResolutionStatus, arg.ResolvedAt, arg.ID)
 	return err
 }
 
@@ -618,7 +621,7 @@ type UpdateProfileByIDParams struct {
 }
 
 func (q *Queries) UpdateProfileByID(ctx context.Context, arg UpdateProfileByIDParams) error {
-	_, err := q.db.ExecContext(ctx, updateProfileByID, arg.Name, arg.ID)
+	_, err := q.exec(ctx, q.updateProfileByIDStmt, updateProfileByID, arg.Name, arg.ID)
 	return err
 }
 
@@ -630,11 +633,11 @@ UPDATE profiles
 
 type UpdateProfileByNameParams struct {
 	Name   string `json:"name"`
-	Name_2 string `json:"name_2"`
+	Name_2 string `json:"name2"`
 }
 
 func (q *Queries) UpdateProfileByName(ctx context.Context, arg UpdateProfileByNameParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, updateProfileByName, arg.Name, arg.Name_2)
+	result, err := q.exec(ctx, q.updateProfileByNameStmt, updateProfileByName, arg.Name, arg.Name_2)
 	if err != nil {
 		return 0, err
 	}
@@ -648,13 +651,13 @@ UPDATE sync_rules
 `
 
 type UpdateSyncRuleParams struct {
-	Status            string       `json:"status"`
-	LastRunSuccessful sql.NullBool `json:"last_run_successful"`
+	Status            types.Status `json:"status"`
+	LastRunSuccessful sql.NullBool `json:"lastRunSuccessful"`
 	ID                int64        `json:"id"`
 }
 
 func (q *Queries) UpdateSyncRule(ctx context.Context, arg UpdateSyncRuleParams) error {
-	_, err := q.db.ExecContext(ctx, updateSyncRule, arg.Status, arg.LastRunSuccessful, arg.ID)
+	_, err := q.exec(ctx, q.updateSyncRuleStmt, updateSyncRule, arg.Status, arg.LastRunSuccessful, arg.ID)
 	return err
 }
 
@@ -670,16 +673,16 @@ DO UPDATE SET
 `
 
 type UpsertFileParams struct {
-	SourcePath string `json:"source_path"`
-	TargetPath string `json:"target_path"`
+	SourcePath string `json:"sourcePath"`
+	TargetPath string `json:"targetPath"`
 	Hash       string `json:"hash"`
 	Size       int64  `json:"size"`
-	ModTime    int64  `json:"mod_time"`
-	LastSynced int64  `json:"last_synced"`
+	ModTime    int64  `json:"modTime"`
+	LastSynced int64  `json:"lastSynced"`
 }
 
 func (q *Queries) UpsertFile(ctx context.Context, arg UpsertFileParams) error {
-	_, err := q.db.ExecContext(ctx, upsertFile,
+	_, err := q.exec(ctx, q.upsertFileStmt, upsertFile,
 		arg.SourcePath,
 		arg.TargetPath,
 		arg.Hash,
