@@ -45,22 +45,27 @@ CREATE TABLE IF NOT EXISTS conflicts (
     source_time INTEGER NOT NULL,
     target_time INTEGER NOT NULL,
     detected_at INTEGER NOT NULL,
-    resolution_status TEXT, -- 'unresolved', 'resolved_source', etc.
-    resolved_at INTEGER,    -- Timestamp of resolution
+    resolution_status INTEGER NOT NULL DEFAULT 0 
+        CHECK(resolution_status IN (0, 1, 2, 3)),
+    resolved_at INTEGER,
     UNIQUE(source_path, target_path)
 );
 
 CREATE TABLE IF NOT EXISTS ignore_patterns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     profile_id INTEGER NOT NULL,
-    pattern TEXT NOT NULL UNIQUE,
-    type TEXT NOT NULL DEFAULT 'glob', -- Glob, Regex, or Exact
+    pattern TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'glob' CHECK(type IN ('glob', 'regex', 'exact')),
+    UNIQUE(profile_id, pattern),  -- Ensures uniqueness within each profile
     FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 
+-- Indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_profiles_name ON profiles(name);
 CREATE INDEX IF NOT EXISTS idx_files_source_path ON files(source_path);
 CREATE INDEX IF NOT EXISTS idx_files_target_path ON files(target_path);
 CREATE INDEX IF NOT EXISTS idx_conflicts_source_path ON conflicts(source_path);
 CREATE INDEX IF NOT EXISTS idx_conflicts_detected_at ON conflicts(detected_at);
 CREATE INDEX IF NOT EXISTS idx_sync_rules_status ON sync_rules(status);
 CREATE INDEX IF NOT EXISTS idx_sync_rules_source_dir ON sync_rules(source_dir);
+CREATE INDEX IF NOT EXISTS idx_ignore_patterns_profile_id ON ignore_patterns(profile_id);

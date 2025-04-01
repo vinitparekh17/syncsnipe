@@ -11,16 +11,16 @@ import (
 )
 
 type Conflict struct {
-	ID               int64          `json:"id"`
-	SourcePath       string         `json:"sourcePath"`
-	TargetPath       string         `json:"targetPath"`
-	SourceHash       string         `json:"sourceHash"`
-	TargetHash       string         `json:"targetHash"`
-	SourceTime       int64          `json:"sourceTime"`
-	TargetTime       int64          `json:"targetTime"`
-	DetectedAt       int64          `json:"detectedAt"`
-	ResolutionStatus sql.NullString `json:"resolutionStatus"`
-	ResolvedAt       sql.NullInt64  `json:"resolvedAt"`
+	ID               int64                          `json:"id"`
+	SourcePath       string                         `json:"sourcePath"`
+	TargetPath       string                         `json:"targetPath"`
+	SourceHash       string                         `json:"sourceHash"`
+	TargetHash       string                         `json:"targetHash"`
+	SourceTime       int64                          `json:"sourceTime"`
+	TargetTime       int64                          `json:"targetTime"`
+	DetectedAt       int64                          `json:"detectedAt"`
+	ResolutionStatus types.ConflictResolutionStatus `json:"resolutionStatus"`
+	ResolvedAt       sql.NullInt64                  `json:"resolvedAt"`
 }
 
 type File struct {
@@ -48,12 +48,12 @@ type Profile struct {
 }
 
 type SyncRule struct {
-	ID                int64        `json:"id"`
-	ProfileID         int64        `json:"profileId"`
-	SourceDir         string       `json:"sourceDir"`
-	TargetDir         string       `json:"targetDir"`
-	Status            types.Status `json:"status"`
-	LastRunSuccessful sql.NullBool `json:"lastRunSuccessful"`
-	CreatedAt         int64        `json:"createdAt"`
-	UpdatedAt         int64        `json:"updatedAt"`
+	ID                int64            `json:"id"`
+	ProfileID         int64            `json:"profileId"`
+	SourceDir         string           `json:"sourceDir"`
+	TargetDir         string           `json:"targetDir"`
+	Status            types.SyncStatus `json:"status"`
+	LastRunSuccessful sql.NullBool     `json:"lastRunSuccessful"`
+	CreatedAt         int64            `json:"createdAt"`
+	UpdatedAt         int64            `json:"updatedAt"`
 }

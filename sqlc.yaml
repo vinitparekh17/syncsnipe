@@ -17,4 +17,7 @@ sql:
         json_tags_case_style: "camel"
         overrides:
           - column: "sync_rules.status"
-            go_type: "github.com/vinitparekh17/syncsnipe/internal/types.Status"
+            go_type: "github.com/vinitparekh17/syncsnipe/internal/types.SyncStatus"
+
+          - column: "conflicts.resolution_status"
+            go_type: "github.com/vinitparekh17/syncsnipe/internal/types.ConflictResolutionStatus"

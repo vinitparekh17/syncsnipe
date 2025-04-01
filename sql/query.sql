@@ -125,7 +125,7 @@ DELETE FROM files
 -- name: AddConflict :one
 INSERT INTO conflicts (
   source_path, target_path, source_hash, target_hash, source_time, target_time, detected_at, resolution_status
-) VALUES ( ?, ?, ?, ?, ?, ?, ?, 'unresolved' )
+) VALUES ( ?, ?, ?, ?, ?, ?, ?, 0 )
 ON CONFLICT DO NOTHING
 RETURNING id;
 
@@ -138,7 +138,7 @@ SELECT *
 SELECT c.* 
   FROM conflicts c
   JOIN sync_rules sr ON c.source_path LIKE sr.source_dir || '%'
-  WHERE sr.profile_id = ? AND c.resolution_status = 'unresolved'
+  WHERE sr.profile_id = ? AND c.resolution_status = 0
   ORDER BY detected_at DESC;
 
 -- name: ResolveConflict :exec

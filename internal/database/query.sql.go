@@ -15,7 +15,7 @@ import (
 const addConflict = `-- name: AddConflict :one
 INSERT INTO conflicts (
   source_path, target_path, source_hash, target_hash, source_time, target_time, detected_at, resolution_status
-) VALUES ( ?, ?, ?, ?, ?, ?, ?, 'unresolved' )
+) VALUES ( ?, ?, ?, ?, ?, ?, ?, 0 )
 ON CONFLICT DO NOTHING
 RETURNING id
 `
@@ -309,13 +309,13 @@ SELECT sr.id,
 `
 
 type GetSyncStatusByProfileNameRow struct {
-	ID          int64        `json:"id"`
-	ProfileName string       `json:"profileName"`
-	SourceDir   string       `json:"sourceDir"`
-	TargetDir   string       `json:"targetDir"`
-	Status      types.Status `json:"status"`
-	CreatedAt   int64        `json:"createdAt"`
-	UpdatedAt   int64        `json:"updatedAt"`
+	ID          int64            `json:"id"`
+	ProfileName string           `json:"profileName"`
+	SourceDir   string           `json:"sourceDir"`
+	TargetDir   string           `json:"targetDir"`
+	Status      types.SyncStatus `json:"status"`
+	CreatedAt   int64            `json:"createdAt"`
+	UpdatedAt   int64            `json:"updatedAt"`
 }
 
 func (q *Queries) GetSyncStatusByProfileName(ctx context.Context, name string) (GetSyncStatusByProfileNameRow, error) {
@@ -544,7 +544,7 @@ const listUnresolvedConflicts = `-- name: ListUnresolvedConflicts :many
 SELECT c.id, c.source_path, c.target_path, c.source_hash, c.target_hash, c.source_time, c.target_time, c.detected_at, c.resolution_status, c.resolved_at 
   FROM conflicts c
   JOIN sync_rules sr ON c.source_path LIKE sr.source_dir || '%'
-  WHERE sr.profile_id = ? AND c.resolution_status = 'unresolved'
+  WHERE sr.profile_id = ? AND c.resolution_status = 0
   ORDER BY detected_at DESC
 `
 
@@ -599,9 +599,9 @@ UPDATE conflicts
 `
 
 type ResolveConflictParams struct {
-	ResolutionStatus sql.NullString `json:"resolutionStatus"`
-	ResolvedAt       sql.NullInt64  `json:"resolvedAt"`
-	ID               int64          `json:"id"`
+	ResolutionStatus types.ConflictResolutionStatus `json:"resolutionStatus"`
+	ResolvedAt       sql.NullInt64                  `json:"resolvedAt"`
+	ID               int64                          `json:"id"`
 }
 
 func (q *Queries) ResolveConflict(ctx context.Context, arg ResolveConflictParams) error {
@@ -651,9 +651,9 @@ UPDATE sync_rules
 `
 
 type UpdateSyncRuleParams struct {
-	Status            types.Status `json:"status"`
-	LastRunSuccessful sql.NullBool `json:"lastRunSuccessful"`
-	ID                int64        `json:"id"`
+	Status            types.SyncStatus `json:"status"`
+	LastRunSuccessful sql.NullBool     `json:"lastRunSuccessful"`
+	ID                int64            `json:"id"`
 }
 
 func (q *Queries) UpdateSyncRule(ctx context.Context, arg UpdateSyncRuleParams) error {
