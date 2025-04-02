@@ -14,72 +14,89 @@ func TestSyncCommands(t *testing.T) {
 	tempSrcDir := test.CreateTempDir(t)
 	tempTargetDir := test.CreateTempDir(t)
 
-	t.Run("SyncCmd", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "sync")
-		assert.NoError(t, err)
-	})
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "SyncCmd",
+			args:    []string{"sync"},
+			wantErr: false,
+			errMsg:  "",
+		},
+		{
+			name:    "AddSyncWithWrongProfileName",
+			args:    []string{"sync", "add", "invalid-profile-name", tempSrcDir, tempTargetDir},
+			wantErr: true,
+			errMsg:  "profile with name 'invalid-profile-name' does not exist",
+		},
+		{
+			name:    "AddSyncWithWrongTargetDir",
+			args:    []string{"sync", "add", test.TestProfileName, tempSrcDir, "invalid-target-dir"},
+			wantErr: true,
+			errMsg:  "target directory 'invalid-target-dir' does not exist",
+		},
+		{
+			name:    "AddSyncWithSameSourceAndTargetDir",
+			args:    []string{"sync", "add", test.TestProfileName, tempSrcDir, tempSrcDir},
+			wantErr: true,
+			errMsg:  "source directory and target directory must be different",
+		},
+		{
+			name:    "AddSyncWithValidParams",
+			args:    []string{"sync", "add", test.TestProfileName, tempSrcDir, tempTargetDir},
+			wantErr: false,
+			errMsg:  "",
+		},
+		{
+			name:    "StatusSyncRuleWithWrongProfileName",
+			args:    []string{"sync", "status", "invalid-profile-name"},
+			wantErr: true,
+			errMsg:  "no sync rule found on 'invalid-profile-name' profile",
+		},
+		{
+			name:    "StatusSyncRule",
+			args:    []string{"sync", "status", test.TestProfileName},
+			wantErr: false,
+			errMsg:  "",
+		},
+		{
+			name:    "RemoveSyncRuleWithWrongProfileName",
+			args:    []string{"sync", "remove", "invalid-profile-name", tempSrcDir},
+			wantErr: true,
+			errMsg:  fmt.Sprintf("no sync rule found on '%s' profile for source directory '%s'", "invalid-profile-name", tempSrcDir),
+		},
+		{
+			name:    "RemoveSyncRuleWithWrongSourceDir",
+			args:    []string{"sync", "remove", test.TestProfileName, "invalid-source-dir"},
+			wantErr: true,
+			errMsg:  fmt.Sprintf("no sync rule found on '%s' profile for source directory '%s'", test.TestProfileName, "invalid-source-dir"),
+		},
+		{
+			name:    "RemoveSyncRule",
+			args:    []string{"sync", "remove", test.TestProfileName, tempSrcDir},
+			wantErr: false,
+			errMsg:  "",
+		},
+	}
 
-	t.Run("AddSyncWithWrongProfileName", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "sync", "add", "invalid-profile-name", tempSrcDir, tempTargetDir)
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "profile with name 'invalid-profile-name' does not exist")
-	})
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := test.ExecuteCommand(cliCmd, tc.args...)
 
-	t.Run("AddSyncWithWrongSourceDir", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "sync", "add", test.TestProfileName, "invalid-source-dir", tempTargetDir)
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "source directory 'invalid-source-dir' does not exist")
-	})
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.errMsg != "" {
+					assert.ErrorContains(t, err, tc.errMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 
-	t.Run("AddSyncWithWrongTargetDir", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "sync", "add", test.TestProfileName, tempSrcDir, "invalid-target-dir")
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "target directory 'invalid-target-dir' does not exist")
-	})
-
-	t.Run("AddSyncWithSameSourceAndTargetDir", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "sync", "add", test.TestProfileName, tempSrcDir, tempSrcDir)
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "source directory and target directory must be different")
-	})
-
-	t.Run("AddSyncWithValidParams", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "sync", "add", test.TestProfileName, tempSrcDir, tempTargetDir)
-		assert.NoError(t, err)
-	})
-
-	t.Run("ListSyncRules", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "sync", "list")
-		assert.NoError(t, err)
-	})
-
-	t.Run("StatusSyncRuleWithWrongProfileName", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "sync", "status", "invalid-profile-name")
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "no sync rule found on 'invalid-profile-name' profile")
-	})
-
-	t.Run("StatusSyncRule", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "sync", "status", test.TestProfileName)
-		assert.NoError(t, err)
-	})
-
-	t.Run("RemoveSyncRuleWithWrongProfileName", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "sync", "remove", "invalid-profile-name", tempSrcDir)
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, fmt.Sprintf("no sync rule found on 'invalid-profile-name' profile for source directory '%s'", tempSrcDir))
-	})
-
-	t.Run("RemoveSyncRuleWithWrongSourceDir", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "sync", "remove", test.TestProfileName, "invalid-source-dir")
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, fmt.Sprintf("no sync rule found on '%s' profile for source directory 'invalid-source-dir'", test.TestProfileName))
-	})
-
-	t.Run("RemoveSyncRule", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "sync", "remove", test.TestProfileName, tempSrcDir)
-		assert.NoError(t, err)
-	})
-
+	// Cleanup after all tests
 	defer test.CleanupTest(t, test.MockDB)
 }

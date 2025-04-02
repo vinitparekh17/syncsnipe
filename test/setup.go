@@ -32,19 +32,6 @@ var (
 
 // SetupTest initializes test database and loads schema
 func SetupTest(t *testing.T) (*database.Queries, error) {
-	// Store original environment variable
-	originalValue, exists := os.LookupEnv("GO_TEST_ENV")
-	os.Setenv("GO_TEST_ENV", "test")
-
-	// Ensure environment cleanup
-	t.Cleanup(func() {
-		if exists {
-			os.Setenv("GO_TEST_ENV", originalValue)
-		} else {
-			os.Unsetenv("GO_TEST_ENV")
-		}
-	})
-
 	MockDB, err := database.GetDatabase(mockDBFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database: %v", err)

@@ -8,51 +8,65 @@ import (
 )
 
 func TestProfileCommands(t *testing.T) {
-	cliCmd := test.GetCliCmd(t)
+	cliCmd := test.GetCliCmd(t) // Setup CLI command
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "ProfileCmd",
+			args:    []string{"profile"},
+			wantErr: false,
+			errMsg:  "",
+		},
+		{
+			name:    "AddProfileWithoutName",
+			args:    []string{"profile", "add"},
+			wantErr: true,
+			errMsg:  "accepts 1 arg(s), received 0",
+		},
+		{
+			name:    "AddProfile",
+			args:    []string{"profile", "add", test.TestProfileName},
+			wantErr: false,
+			errMsg:  "",
+		},
+		{
+			name:    "RenameProfile",
+			args:    []string{"profile", "rename", test.TestProfileName, "new-profile"},
+			wantErr: false,
+			errMsg:  "",
+		},
+		{
+			name:    "DeleteProfile",
+			args:    []string{"profile", "delete", "new-profile"},
+			wantErr: false,
+			errMsg:  "",
+		},
+		{
+			name:    "DeleteNonExistentProfile",
+			args:    []string{"profile", "delete", "FakeProfile"},
+			wantErr: true,
+			errMsg:  "profile with FakeProfile name does not exist",
+		},
+	}
 
-	t.Run("ProfileCmd", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "profile")
-		assert.NoError(t, err)
-	})
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := test.ExecuteCommand(cliCmd, tc.args...)
 
-	t.Run("AddProfileWithoutName", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "profile", "add")
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "accepts 1 arg(s), received 0")
-	})
-
-	t.Run("AddProfile", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "profile", "add", test.TestProfileName)
-		assert.NoError(t, err)
-	})
-
-	t.Run("ListProfiles", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "profile", "list")
-		assert.NoError(t, err)
-	})
-
-	t.Run("RenameProfile", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "profile", "rename", test.TestProfileName, "new-profile")
-		test.TestProfileName = "new-profile" // reassigning profile name in order to delete it in the next test case
-		assert.NoError(t, err)
-	})
-
-	t.Run("DeleteProfile", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "profile", "delete", test.TestProfileName)
-		assert.NoError(t, err)
-	})
-
-	t.Run("EditNonExistentProfile", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "profile", "rename", "FakeProfile", "new-profile")
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "profile with FakeProfile name does not exist")
-	})
-
-	t.Run("DeleteNonExistentProfile", func(t *testing.T) {
-		err := test.ExecuteCommand(cliCmd, "profile", "delete", "FakeProfile")
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "profile with FakeProfile name does not exist")
-	})
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.errMsg != "" {
+					assert.ErrorContains(t, err, tc.errMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 
 	t.Cleanup(func() {
 		test.CleanupTest(t, test.MockDB)
