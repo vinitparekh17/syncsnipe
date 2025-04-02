@@ -19,7 +19,7 @@ const DefaultPort = "8080"
 
 var port string
 
-func NewWebCmd(dbTx *database.Queries) (*cobra.Command, error) {
+func NewWebCmd(dbTx *database.Queries, frontendDir string) (*cobra.Command, error) {
 	webCmd := &cobra.Command{
 		Use:   "web",
 		Short: "run web interface",
@@ -56,7 +56,7 @@ func NewWebCmd(dbTx *database.Queries) (*cobra.Command, error) {
 				colorlog.Success("graceful shutdown completed.")
 			}()
 
-			server, err := server.NewServer(app, port)
+			server, err := server.NewServer(app, port, frontendDir)
 			if err != nil {
 				return err
 			}

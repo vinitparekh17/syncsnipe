@@ -17,9 +17,7 @@ type Handler struct {
 	syncWorker  *sync.SyncWorker
 }
 
-var FrontendDir = filepath.Join("frontend", "build")
-
-func ServeIndexPage(fs stuffbin.FileSystem) http.HandlerFunc {
+func ServeIndexPage(fs stuffbin.FileSystem, frontendDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -32,7 +30,7 @@ func ServeIndexPage(fs stuffbin.FileSystem) http.HandlerFunc {
 		w.Header().Set("Expires", "-1")
 		w.Header().Set("Content-Type", "text/html")
 
-		file, err := fs.Get(filepath.Join(FrontendDir, "index.html"))
+		file, err := fs.Get(filepath.Join(frontendDir, "index.html"))
 
 		if err != nil {
 			colorlog.Error("error at fs.Get: %v", err)
@@ -44,7 +42,7 @@ func ServeIndexPage(fs stuffbin.FileSystem) http.HandlerFunc {
 	}
 }
 
-func ServeAssets(fs stuffbin.FileSystem) http.HandlerFunc {
+func ServeAssets(fs stuffbin.FileSystem, frontendDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -52,7 +50,7 @@ func ServeAssets(fs stuffbin.FileSystem) http.HandlerFunc {
 		}
 
 		assetPath := r.URL.Path[len("/assets/"):]
-		file, err := fs.Get(filepath.Join(FrontendDir, assetPath))
+		file, err := fs.Get(filepath.Join(frontendDir, assetPath))
 		if err != nil {
 			colorlog.Error("error at fs.Get: %v", err)
 			http.Error(w, "page not found", http.StatusNotFound)
@@ -63,7 +61,7 @@ func ServeAssets(fs stuffbin.FileSystem) http.HandlerFunc {
 }
 
 // ServeApp serves the _app directory (sveltekit build output)
-func ServeApp(fs stuffbin.FileSystem) http.HandlerFunc {
+func ServeApp(fs stuffbin.FileSystem, frontendDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -71,7 +69,7 @@ func ServeApp(fs stuffbin.FileSystem) http.HandlerFunc {
 		}
 
 		appPath := r.URL.Path[len("/_app/"):]
-		file, err := fs.Get(filepath.Join(FrontendDir, appPath))
+		file, err := fs.Get(filepath.Join(frontendDir, appPath))
 		if err != nil {
 			colorlog.Error("error at fs.Get: %v", err)
 			http.Error(w, "page not found", http.StatusNotFound)

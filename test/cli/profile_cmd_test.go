@@ -54,5 +54,7 @@ func TestProfileCommands(t *testing.T) {
 		assert.ErrorContains(t, err, "profile with FakeProfile name does not exist")
 	})
 
-	defer test.CleanupTest(t, test.MockDB)
+	t.Cleanup(func() {
+		test.CleanupTest(t, test.MockDB)
+	})
 }

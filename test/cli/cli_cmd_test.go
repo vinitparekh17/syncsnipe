@@ -25,5 +25,7 @@ func TestNewCliCmd(t *testing.T) {
 		assert.NotNil(t, cliCmd)
 	})
 
-	defer test.CleanupTest(t, test.MockDB)
+	t.Cleanup(func() {
+		test.CleanupTest(t, test.MockDB)
+	})
 }

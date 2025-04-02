@@ -19,8 +19,8 @@ type SyncServer struct {
 	app    *core.SyncEngine
 }
 
-func NewServer(app *core.SyncEngine, port string) (*SyncServer, error) {
-	mux, err := NewMuxRouter()
+func NewServer(app *core.SyncEngine, port string, frontendDir string) (*SyncServer, error) {
+	mux, err := NewMuxRouter(frontendDir)
 	if err != nil {
 		colorlog.Error("error creating mux router: %v", err)
 		return nil, err
@@ -42,16 +42,16 @@ func NewServer(app *core.SyncEngine, port string) (*SyncServer, error) {
 	}, nil
 }
 
-func NewMuxRouter() (*http.ServeMux, error) {
+func NewMuxRouter(frontendDir string) (*http.ServeMux, error) {
 	mux := http.NewServeMux()
-	fs, err := stuffbin.LoadFile(handler.FrontendDir)
+	fs, err := stuffbin.LoadFile(frontendDir)
 	if err != nil {
 		return nil, fmt.Errorf("error loading frontend files: %v", err)
 	}
 
-	mux.Handle("/_app/", handler.ServeApp(fs))
-	mux.Handle("/assets/", handler.ServeAssets(fs))
-	mux.HandleFunc("/", handler.ServeIndexPage(fs))
+	mux.Handle("/_app/", handler.ServeApp(fs, frontendDir))
+	mux.Handle("/assets/", handler.ServeAssets(fs, frontendDir))
+	mux.HandleFunc("/", handler.ServeIndexPage(fs, frontendDir))
 	return mux, nil
 }
 

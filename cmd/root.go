@@ -16,8 +16,9 @@ const (
 )
 
 var (
-	rootCmd    = &cobra.Command{Use: "syncsnipe"}
-	schemaFile = filepath.Join("sql", "schema.sql")
+	rootCmd     = &cobra.Command{Use: "syncsnipe"}
+	schemaFile  = filepath.Join("sql", "schema.sql")
+	frontendDir = filepath.Join("frontend", "build")
 )
 
 func Execute() error {
@@ -33,7 +34,7 @@ func Execute() error {
 
 	dbTx := database.New(db)
 
-	webCmd, err := web.NewWebCmd(dbTx)
+	webCmd, err := web.NewWebCmd(dbTx, frontendDir)
 	if err != nil {
 		return err
 	}
