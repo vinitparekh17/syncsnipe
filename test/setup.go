@@ -52,9 +52,9 @@ func GetCliCmd(t *testing.T) *cobra.Command {
 	return cli.NewCliCmd(q)
 }
 
-func StartWebServer(t *testing.T, args ...string) func() {
+func StartWebServer(t *testing.T, frontendDir string, args ...string) func() {
 	t.Helper()
-	webCmd := GetWebCmd(t)
+	webCmd := GetWebCmd(t, frontendDir)
 	const webHost = "localhost"
 	webPort := "8080" // Default port
 
@@ -129,10 +129,10 @@ func executeCommandWithContext(ctx context.Context, cmd *cobra.Command, args ...
 }
 
 // GetWebCmd returns a configured web command for testing
-func GetWebCmd(t *testing.T) *cobra.Command {
+func GetWebCmd(t *testing.T, frontendDir string) *cobra.Command {
 	q, err := SetupTest(t)
 	require.NoError(t, err)
-	webCmd, err := web.NewWebCmd(q, FrontendDir)
+	webCmd, err := web.NewWebCmd(q, frontendDir)
 	require.NoError(t, err)
 	return webCmd
 }
