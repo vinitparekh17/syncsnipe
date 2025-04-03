@@ -14,8 +14,8 @@ SELECT COUNT(*)
   FROM profiles 
   WHERE LOWER(name) = LOWER(?);
 
--- name: GetProfileByName :one
-SELECT *
+-- name: GetProfileIDByName :one
+SELECT id
   FROM profiles
   WHERE name = ?;
 
@@ -165,3 +165,7 @@ SELECT *
 -- name: RemoveIgnorePattern :exec
 DELETE FROM ignore_patterns
   WHERE id = ?;
+
+-- name: RemoveIgnorePatternByProfileName :execrows
+DELETE FROM ignore_patterns
+  WHERE profile_id = ? AND pattern = ?;

@@ -10,6 +10,8 @@ import (
 	"text/tabwriter"
 	"time"
 	"unicode"
+
+	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
 )
 
 func DisplayList(items any) error {
@@ -59,7 +61,7 @@ func DisplayStruct(item any) error {
 	return nil
 }
 
-func extractHeadersAndValues(item interface{}) (headers, values []string, err error) {
+func extractHeadersAndValues(item any) (headers, values []string, err error) {
 	v := reflect.ValueOf(item)
 	if v.Kind() != reflect.Struct {
 		return nil, nil, fmt.Errorf("expected a struct, got %s", v.Kind())
@@ -133,4 +135,9 @@ func formatField(name string, value any) string {
 	}
 
 	return fmt.Sprintf("%v", value) // Default case
+}
+
+func DisplayError(err error) {
+	colorlog.CLIError(err.Error())
+	os.Exit(1)
 }

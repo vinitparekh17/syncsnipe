@@ -55,4 +55,7 @@ func TestSetupTest(t *testing.T) {
 			}
 		})
 	}
+	t.Cleanup(func() {
+		test.CleanupTest(t, test.MockDB)
+	})
 }

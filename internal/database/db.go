@@ -60,8 +60,8 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getProfileStmt, err = db.PrepareContext(ctx, getProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query GetProfile: %w", err)
 	}
-	if q.getProfileByNameStmt, err = db.PrepareContext(ctx, getProfileByName); err != nil {
-		return nil, fmt.Errorf("error preparing query GetProfileByName: %w", err)
+	if q.getProfileIDByNameStmt, err = db.PrepareContext(ctx, getProfileIDByName); err != nil {
+		return nil, fmt.Errorf("error preparing query GetProfileIDByName: %w", err)
 	}
 	if q.getProfileIDBySourceDirStmt, err = db.PrepareContext(ctx, getProfileIDBySourceDir); err != nil {
 		return nil, fmt.Errorf("error preparing query GetProfileIDBySourceDir: %w", err)
@@ -95,6 +95,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.removeIgnorePatternStmt, err = db.PrepareContext(ctx, removeIgnorePattern); err != nil {
 		return nil, fmt.Errorf("error preparing query RemoveIgnorePattern: %w", err)
+	}
+	if q.removeIgnorePatternByProfileNameStmt, err = db.PrepareContext(ctx, removeIgnorePatternByProfileName); err != nil {
+		return nil, fmt.Errorf("error preparing query RemoveIgnorePatternByProfileName: %w", err)
 	}
 	if q.resolveConflictStmt, err = db.PrepareContext(ctx, resolveConflict); err != nil {
 		return nil, fmt.Errorf("error preparing query ResolveConflict: %w", err)
@@ -176,9 +179,9 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getProfileStmt: %w", cerr)
 		}
 	}
-	if q.getProfileByNameStmt != nil {
-		if cerr := q.getProfileByNameStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getProfileByNameStmt: %w", cerr)
+	if q.getProfileIDByNameStmt != nil {
+		if cerr := q.getProfileIDByNameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getProfileIDByNameStmt: %w", cerr)
 		}
 	}
 	if q.getProfileIDBySourceDirStmt != nil {
@@ -234,6 +237,11 @@ func (q *Queries) Close() error {
 	if q.removeIgnorePatternStmt != nil {
 		if cerr := q.removeIgnorePatternStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing removeIgnorePatternStmt: %w", cerr)
+		}
+	}
+	if q.removeIgnorePatternByProfileNameStmt != nil {
+		if cerr := q.removeIgnorePatternByProfileNameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing removeIgnorePatternByProfileNameStmt: %w", cerr)
 		}
 	}
 	if q.resolveConflictStmt != nil {
@@ -298,71 +306,73 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                              DBTX
-	tx                              *sql.Tx
-	addConflictStmt                 *sql.Stmt
-	addIgnorePatternStmt            *sql.Stmt
-	addSyncRuleStmt                 *sql.Stmt
-	createProfileStmt               *sql.Stmt
-	deleteFileStmt                  *sql.Stmt
-	deleteProfileByIDStmt           *sql.Stmt
-	deleteProfileByNameStmt         *sql.Stmt
-	deleteSyncRuleByProfileNameStmt *sql.Stmt
-	getConflictStmt                 *sql.Stmt
-	getFileStmt                     *sql.Stmt
-	getIgnorePatternStmt            *sql.Stmt
-	getProfileStmt                  *sql.Stmt
-	getProfileByNameStmt            *sql.Stmt
-	getProfileIDBySourceDirStmt     *sql.Stmt
-	getSyncRuleStmt                 *sql.Stmt
-	getSyncStatusByProfileNameStmt  *sql.Stmt
-	isProfileExistsStmt             *sql.Stmt
-	listFilesStmt                   *sql.Stmt
-	listIgnorePatternStmt           *sql.Stmt
-	listProfilesStmt                *sql.Stmt
-	listSyncRulesStmt               *sql.Stmt
-	listSyncRulesGroupByProfileStmt *sql.Stmt
-	listUnresolvedConflictsStmt     *sql.Stmt
-	removeIgnorePatternStmt         *sql.Stmt
-	resolveConflictStmt             *sql.Stmt
-	updateProfileByIDStmt           *sql.Stmt
-	updateProfileByNameStmt         *sql.Stmt
-	updateSyncRuleStmt              *sql.Stmt
-	upsertFileStmt                  *sql.Stmt
+	db                                   DBTX
+	tx                                   *sql.Tx
+	addConflictStmt                      *sql.Stmt
+	addIgnorePatternStmt                 *sql.Stmt
+	addSyncRuleStmt                      *sql.Stmt
+	createProfileStmt                    *sql.Stmt
+	deleteFileStmt                       *sql.Stmt
+	deleteProfileByIDStmt                *sql.Stmt
+	deleteProfileByNameStmt              *sql.Stmt
+	deleteSyncRuleByProfileNameStmt      *sql.Stmt
+	getConflictStmt                      *sql.Stmt
+	getFileStmt                          *sql.Stmt
+	getIgnorePatternStmt                 *sql.Stmt
+	getProfileStmt                       *sql.Stmt
+	getProfileIDByNameStmt               *sql.Stmt
+	getProfileIDBySourceDirStmt          *sql.Stmt
+	getSyncRuleStmt                      *sql.Stmt
+	getSyncStatusByProfileNameStmt       *sql.Stmt
+	isProfileExistsStmt                  *sql.Stmt
+	listFilesStmt                        *sql.Stmt
+	listIgnorePatternStmt                *sql.Stmt
+	listProfilesStmt                     *sql.Stmt
+	listSyncRulesStmt                    *sql.Stmt
+	listSyncRulesGroupByProfileStmt      *sql.Stmt
+	listUnresolvedConflictsStmt          *sql.Stmt
+	removeIgnorePatternStmt              *sql.Stmt
+	removeIgnorePatternByProfileNameStmt *sql.Stmt
+	resolveConflictStmt                  *sql.Stmt
+	updateProfileByIDStmt                *sql.Stmt
+	updateProfileByNameStmt              *sql.Stmt
+	updateSyncRuleStmt                   *sql.Stmt
+	upsertFileStmt                       *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db:                              tx,
-		tx:                              tx,
-		addConflictStmt:                 q.addConflictStmt,
-		addIgnorePatternStmt:            q.addIgnorePatternStmt,
-		addSyncRuleStmt:                 q.addSyncRuleStmt,
-		createProfileStmt:               q.createProfileStmt,
-		deleteFileStmt:                  q.deleteFileStmt,
-		deleteProfileByIDStmt:           q.deleteProfileByIDStmt,
-		deleteProfileByNameStmt:         q.deleteProfileByNameStmt,
-		deleteSyncRuleByProfileNameStmt: q.deleteSyncRuleByProfileNameStmt,
-		getConflictStmt:                 q.getConflictStmt,
-		getFileStmt:                     q.getFileStmt,
-		getIgnorePatternStmt:            q.getIgnorePatternStmt,
-		getProfileStmt:                  q.getProfileStmt,
-		getProfileByNameStmt:            q.getProfileByNameStmt,
-		getProfileIDBySourceDirStmt:     q.getProfileIDBySourceDirStmt,
-		getSyncRuleStmt:                 q.getSyncRuleStmt,
-		getSyncStatusByProfileNameStmt:  q.getSyncStatusByProfileNameStmt,
-		isProfileExistsStmt:             q.isProfileExistsStmt,
-		listFilesStmt:                   q.listFilesStmt,
-		listIgnorePatternStmt:           q.listIgnorePatternStmt,
-		listProfilesStmt:                q.listProfilesStmt,
-		listSyncRulesStmt:               q.listSyncRulesStmt,
-		listSyncRulesGroupByProfileStmt: q.listSyncRulesGroupByProfileStmt,
-		listUnresolvedConflictsStmt:     q.listUnresolvedConflictsStmt,
-		removeIgnorePatternStmt:         q.removeIgnorePatternStmt,
-		resolveConflictStmt:             q.resolveConflictStmt,
-		updateProfileByIDStmt:           q.updateProfileByIDStmt,
-		updateProfileByNameStmt:         q.updateProfileByNameStmt,
-		updateSyncRuleStmt:              q.updateSyncRuleStmt,
-		upsertFileStmt:                  q.upsertFileStmt,
+		db:                                   tx,
+		tx:                                   tx,
+		addConflictStmt:                      q.addConflictStmt,
+		addIgnorePatternStmt:                 q.addIgnorePatternStmt,
+		addSyncRuleStmt:                      q.addSyncRuleStmt,
+		createProfileStmt:                    q.createProfileStmt,
+		deleteFileStmt:                       q.deleteFileStmt,
+		deleteProfileByIDStmt:                q.deleteProfileByIDStmt,
+		deleteProfileByNameStmt:              q.deleteProfileByNameStmt,
+		deleteSyncRuleByProfileNameStmt:      q.deleteSyncRuleByProfileNameStmt,
+		getConflictStmt:                      q.getConflictStmt,
+		getFileStmt:                          q.getFileStmt,
+		getIgnorePatternStmt:                 q.getIgnorePatternStmt,
+		getProfileStmt:                       q.getProfileStmt,
+		getProfileIDByNameStmt:               q.getProfileIDByNameStmt,
+		getProfileIDBySourceDirStmt:          q.getProfileIDBySourceDirStmt,
+		getSyncRuleStmt:                      q.getSyncRuleStmt,
+		getSyncStatusByProfileNameStmt:       q.getSyncStatusByProfileNameStmt,
+		isProfileExistsStmt:                  q.isProfileExistsStmt,
+		listFilesStmt:                        q.listFilesStmt,
+		listIgnorePatternStmt:                q.listIgnorePatternStmt,
+		listProfilesStmt:                     q.listProfilesStmt,
+		listSyncRulesStmt:                    q.listSyncRulesStmt,
+		listSyncRulesGroupByProfileStmt:      q.listSyncRulesGroupByProfileStmt,
+		listUnresolvedConflictsStmt:          q.listUnresolvedConflictsStmt,
+		removeIgnorePatternStmt:              q.removeIgnorePatternStmt,
+		removeIgnorePatternByProfileNameStmt: q.removeIgnorePatternByProfileNameStmt,
+		resolveConflictStmt:                  q.resolveConflictStmt,
+		updateProfileByIDStmt:                q.updateProfileByIDStmt,
+		updateProfileByNameStmt:              q.updateProfileByNameStmt,
+		updateSyncRuleStmt:                   q.updateSyncRuleStmt,
+		upsertFileStmt:                       q.upsertFileStmt,
 	}
 }

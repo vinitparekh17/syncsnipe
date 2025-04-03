@@ -97,6 +97,7 @@ func TestSyncCommands(t *testing.T) {
 		})
 	}
 
-	// Cleanup after all tests
-	defer test.CleanupTest(t, test.MockDB)
+	t.Cleanup(func() {
+		test.CleanupTest(t, test.MockDB)
+	})
 }

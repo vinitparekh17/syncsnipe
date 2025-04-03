@@ -53,9 +53,9 @@ RETURNING id
 `
 
 type AddIgnorePatternParams struct {
-	ProfileID int64  `json:"profileId"`
-	Pattern   string `json:"pattern"`
-	Type      string `json:"type"`
+	ProfileID int64            `json:"profileId"`
+	Pattern   string           `json:"pattern"`
+	Type      types.IgnoreType `json:"type"`
 }
 
 func (q *Queries) AddIgnorePattern(ctx context.Context, arg AddIgnorePatternParams) (int64, error) {
@@ -241,22 +241,17 @@ func (q *Queries) GetProfile(ctx context.Context, id int64) (Profile, error) {
 	return i, err
 }
 
-const getProfileByName = `-- name: GetProfileByName :one
-SELECT id, name, created_at, updated_at
+const getProfileIDByName = `-- name: GetProfileIDByName :one
+SELECT id
   FROM profiles
   WHERE name = ?
 `
 
-func (q *Queries) GetProfileByName(ctx context.Context, name string) (Profile, error) {
-	row := q.queryRow(ctx, q.getProfileByNameStmt, getProfileByName, name)
-	var i Profile
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+func (q *Queries) GetProfileIDByName(ctx context.Context, name string) (int64, error) {
+	row := q.queryRow(ctx, q.getProfileIDByNameStmt, getProfileIDByName, name)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getProfileIDBySourceDir = `-- name: GetProfileIDBySourceDir :one
@@ -590,6 +585,24 @@ DELETE FROM ignore_patterns
 func (q *Queries) RemoveIgnorePattern(ctx context.Context, id int64) error {
 	_, err := q.exec(ctx, q.removeIgnorePatternStmt, removeIgnorePattern, id)
 	return err
+}
+
+const removeIgnorePatternByProfileName = `-- name: RemoveIgnorePatternByProfileName :execrows
+DELETE FROM ignore_patterns
+  WHERE profile_id = ? AND pattern = ?
+`
+
+type RemoveIgnorePatternByProfileNameParams struct {
+	ProfileID int64  `json:"profileId"`
+	Pattern   string `json:"pattern"`
+}
+
+func (q *Queries) RemoveIgnorePatternByProfileName(ctx context.Context, arg RemoveIgnorePatternByProfileNameParams) (int64, error) {
+	result, err := q.exec(ctx, q.removeIgnorePatternByProfileNameStmt, removeIgnorePatternByProfileName, arg.ProfileID, arg.Pattern)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const resolveConflict = `-- name: ResolveConflict :exec

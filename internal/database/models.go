@@ -34,10 +34,10 @@ type File struct {
 }
 
 type IgnorePattern struct {
-	ID        int64  `json:"id"`
-	ProfileID int64  `json:"profileId"`
-	Pattern   string `json:"pattern"`
-	Type      string `json:"type"`
+	ID        int64            `json:"id"`
+	ProfileID int64            `json:"profileId"`
+	Pattern   string           `json:"pattern"`
+	Type      types.IgnoreType `json:"type"`
 }
 
 type Profile struct {

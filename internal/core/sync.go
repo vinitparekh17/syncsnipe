@@ -39,16 +39,16 @@ func (s *Sync) AddSyncRule(ctx context.Context, profileName, sourceDir, targetDi
 		return fmt.Errorf("target directory '%s' does not exist", targetDir)
 	}
 
-	profile, err := s.DB.GetProfileByName(ctx, profileName)
+	profileID, err := s.DB.GetProfileIDByName(ctx, profileName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return fmt.Errorf("profile with name '%s' does not exist", profileName)
+			return fmt.Errorf(profileNotFoundErr, profileName)
 		}
 		return err
 	}
 
 	if _, err = s.DB.AddSyncRule(context.Background(), database.AddSyncRuleParams{
-		ProfileID: profile.ID,
+		ProfileID: profileID,
 		SourceDir: sourceDir,
 		TargetDir: targetDir,
 	}); err != nil {

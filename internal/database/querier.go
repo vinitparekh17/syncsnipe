@@ -21,7 +21,7 @@ type Querier interface {
 	GetFile(ctx context.Context, arg GetFileParams) (File, error)
 	GetIgnorePattern(ctx context.Context, id int64) (IgnorePattern, error)
 	GetProfile(ctx context.Context, id int64) (Profile, error)
-	GetProfileByName(ctx context.Context, name string) (Profile, error)
+	GetProfileIDByName(ctx context.Context, name string) (int64, error)
 	GetProfileIDBySourceDir(ctx context.Context, sourceDir string) (int64, error)
 	GetSyncRule(ctx context.Context, id int64) (SyncRule, error)
 	GetSyncStatusByProfileName(ctx context.Context, name string) (GetSyncStatusByProfileNameRow, error)
@@ -33,6 +33,7 @@ type Querier interface {
 	ListSyncRulesGroupByProfile(ctx context.Context) ([]ListSyncRulesGroupByProfileRow, error)
 	ListUnresolvedConflicts(ctx context.Context, profileID int64) ([]Conflict, error)
 	RemoveIgnorePattern(ctx context.Context, id int64) error
+	RemoveIgnorePatternByProfileName(ctx context.Context, arg RemoveIgnorePatternByProfileNameParams) (int64, error)
 	ResolveConflict(ctx context.Context, arg ResolveConflictParams) error
 	UpdateProfileByID(ctx context.Context, arg UpdateProfileByIDParams) error
 	UpdateProfileByName(ctx context.Context, arg UpdateProfileByNameParams) (int64, error)

@@ -21,3 +21,6 @@ sql:
 
           - column: "conflicts.resolution_status"
             go_type: "github.com/vinitparekh17/syncsnipe/internal/types.ConflictResolutionStatus"
+
+          - column: "ignore_patterns.type"
+            go_type: "github.com/vinitparekh17/syncsnipe/internal/types.IgnoreType"

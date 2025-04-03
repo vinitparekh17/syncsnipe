@@ -18,11 +18,13 @@ Use the available subcommands to create and manage your sync configurations.`,
 	// Initialize services
 	profileService := core.NewProfile(q)
 	syncService := core.NewSync(q)
+	ignoreService := core.NewIgnore(q)
 
 	// Add subcommands
 	cliCmd.AddCommand(
 		NewProfileCmd(profileService),
 		NewSyncCmd(syncService),
+		NewIgnorePatternCmd(ignoreService),
 	)
 
 	return cliCmd
