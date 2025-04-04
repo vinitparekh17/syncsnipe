@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS ignore_patterns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     profile_id INTEGER NOT NULL,
     pattern TEXT NOT NULL,
-    type TEXT NOT NULL DEFAULT 'glob' CHECK(type IN ('glob', 'regex', 'exact')),
+    type INTEGER NOT NULL DEFAULT 0 
+        CHECK(type IN (0, 1, 2)), -- 0: glob, 1: regex, 2: exact
     UNIQUE(profile_id, pattern),  -- Ensures uniqueness within each profile
     FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );

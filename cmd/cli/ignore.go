@@ -30,8 +30,7 @@ func newAddIgnorePatternCmd(ignoreService core.IgnoreService) *cobra.Command {
 		Short: "Add an ignore pattern to a profile",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			utils.VerifySuccess(ignoreService.AddIgnore(cmd.Context(), args[0], args[1]), "ignore pattern added successfully")
-			return nil
+			return utils.VerifySuccess(ignoreService.AddIgnore(cmd.Context(), args[0], args[1]), "ignore pattern added successfully")
 		},
 	}
 
@@ -64,8 +63,7 @@ func newDeleteIgnorePatternCmd(ignoreService core.IgnoreService) *cobra.Command 
 		Short: "Remove an ignore pattern from a profile",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			utils.VerifySuccess(ignoreService.DeleteIgnorePattern(cmd.Context(), args[0], args[1]), "ignore pattern deleted successfully")
-			return nil
+			return utils.VerifySuccess(ignoreService.DeleteIgnorePattern(cmd.Context(), args[0], args[1]), "ignore pattern deleted successfully")
 		},
 	}
 
