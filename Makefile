@@ -127,12 +127,12 @@ clean-db: ## Remove SQLite3 database and temporary files
 
 clean-binary: ## Remove the compiled Go binary
 	@rm -f syncsnipe
+	@rm -f coverage.out
 
 clean-all: clean-frontend clean-db clean-binary ## Remove all generated artifacts
 	@echo "→ Cleanup completed." 
 
 ##@ GIT ACTIONS
-
 
 push: format lint ## Lint, format, and push code to Git
 	@git diff --quiet || ( \
