@@ -3,7 +3,7 @@ module github.com/vinitparekh17/syncsnipe
 go 1.24.0
 
 require (
-	github.com/fsnotify/fsnotify v1.8.0
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gobwas/glob v0.2.3
 	github.com/knadh/stuffbin v1.3.0
 	github.com/mattn/go-sqlite3 v1.14.24
