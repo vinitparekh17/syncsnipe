@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 )
 
 type SyncOperation struct {
+	profileID int64
 	path      string
 	operation string
 	hash      string
@@ -18,34 +20,69 @@ type SyncOperation struct {
 }
 
 type SyncWorker struct {
-	db        *database.Queries
-	syncQueue chan *SyncOperation
-	rules     map[string]string
-	wg        sync.WaitGroup
+	db          *database.Queries
+	syncQueue   chan *SyncOperation
+	workerCount int
+	stopCh      chan struct{}
+	rules       map[string]string
+	wg          sync.WaitGroup
 }
 
-func NewSyncWorker(db *database.Queries, syncQueue chan *SyncOperation) (*SyncWorker, error) {
+func NewSyncWorker(db *database.Queries, syncQueue chan *SyncOperation, workerCount int) (*SyncWorker, error) {
+	if workerCount <= 0 {
+		workerCount = runtime.NumCPU() // Default to CPU count
+	}
+
 	return &SyncWorker{
-		db:        db,
-		syncQueue: syncQueue,
-		rules:     make(map[string]string),
+		db:          db,
+		syncQueue:   syncQueue,
+		rules:       make(map[string]string),
+		workerCount: workerCount,
+		stopCh:      make(chan struct{}),
 	}, nil
 }
 
-func (s *SyncWorker) Start() {
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
-		for op := range s.syncQueue {
+func (s *SyncWorker) Start(ctx context.Context) {
+	// Launch the worker pool
+	for i := range s.workerCount {
+		s.wg.Add(1)
+		go func(workerID int) {
+			defer s.wg.Done()
+			s.workerLoop(ctx, workerID)
+		}(i)
+	}
+
+	colorlog.Success("Started sync worker pool with %d workers", s.workerCount)
+}
+
+func (s *SyncWorker) workerLoop(ctx context.Context, workerID int) {
+	for {
+		select {
+		case op, ok := <-s.syncQueue:
+			if !ok {
+				colorlog.Info("Worker %d stopping: queue closed", workerID)
+				return
+			}
 			s.processOperation(op)
+		case <-ctx.Done():
+			colorlog.Info("Worker %d stopping: context canceled", workerID)
+			return
+		case <-s.stopCh:
+			colorlog.Info("Worker %d stopping: stop signal received", workerID)
+			return
 		}
-		colorlog.Info("SyncWorker stopped")
-	}()
+	}
 }
 
 // TODO: Complete the logic, must support all file events
 func (s *SyncWorker) processOperation(op *SyncOperation) {
 	colorlog.Info("Processing operation %s on %s", op.operation, op.path)
+
+	if err := s.loadRules(op.profileID); err != nil {
+		colorlog.Error("error loading rules for profile %d: %v", op.profileID, err)
+		return
+	}
+
 	targetPath, err := s.getTargetPath(op.path)
 	if err != nil {
 		colorlog.Error("error getting target path for %s: %v", op.path, err)
@@ -116,4 +153,24 @@ func (s *SyncWorker) getTargetPath(sourcePath string) (string, error) {
 		return "", nil
 	}
 	return filepath.Join(targetDir, filepath.Base(sourcePath)), nil
+}
+
+func (s *SyncWorker) loadRules(profileID int64) error {
+	rules, err := s.db.ListSyncRules(context.Background(), profileID)
+	if err != nil {
+		return err
+	}
+
+	for _, rule := range rules {
+		s.rules[rule.SourceDir] = rule.TargetDir
+	}
+	return nil
+}
+
+func (s *SyncWorker) close() {
+	close(s.stopCh)
+	s.wg.Wait()
+	close(s.syncQueue)
+
+	colorlog.Success("SyncWorker pool shutdown complete")
 }

@@ -486,6 +486,44 @@ func (q *Queries) ListSyncRules(ctx context.Context, profileID int64) ([]SyncRul
 	return items, nil
 }
 
+const listSyncRulesByProfileID = `-- name: ListSyncRulesByProfileID :many
+SELECT id, profile_id, source_dir, target_dir, status, last_run_successful, created_at, updated_at
+  FROM sync_rules
+  WHERE profile_id = ? AND status IS NOT 0
+`
+
+func (q *Queries) ListSyncRulesByProfileID(ctx context.Context, profileID int64) ([]SyncRule, error) {
+	rows, err := q.query(ctx, q.listSyncRulesByProfileIDStmt, listSyncRulesByProfileID, profileID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SyncRule{}
+	for rows.Next() {
+		var i SyncRule
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProfileID,
+			&i.SourceDir,
+			&i.TargetDir,
+			&i.Status,
+			&i.LastRunSuccessful,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSyncRulesGroupByProfile = `-- name: ListSyncRulesGroupByProfile :many
 SELECT sr.profile_id as pid,
   p.name as profile_name,

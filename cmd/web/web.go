@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -24,46 +25,63 @@ func NewWebCmd(dbTx *database.Queries, frontendDir string) (*cobra.Command, erro
 		Use:   "web",
 		Short: "run web interface",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var wg sync.WaitGroup
+			ctx, cancel := context.WithCancel(cmd.Context())
+			defer cancel()
+
+			// Initialize the watcher first to fail fast if there's an error
+			watcher, err := s.NewSyncWatcher(dbTx)
+			if err != nil {
+				return fmt.Errorf("unable to start watcher: %w", err)
+			}
+
+			// Setup shutdown signaling
+			shutdownChan := make(chan struct{})
 			sigChan := make(chan os.Signal, 1)
 			signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-			shutdownChan := make(chan struct{})
-			watcher, err := s.NewSyncWatcher(dbTx)
-			if err != nil {
-				return fmt.Errorf("unable to start watcher: %v", err)
-			}
-
+			// Initialize the application
 			app := &core.SyncEngine{
 				DB:           dbTx,
 				Watcher:      watcher,
 				ShutdownChan: shutdownChan,
 			}
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				watcher.Start()
-			}()
-
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-
-				<-sigChan
-				colorlog.Info("shutdown signal received")
-				close(shutdownChan)
-				colorlog.Success("graceful shutdown completed.")
-			}()
-
+			// Start the server first
 			server, err := server.NewServer(app, port, frontendDir)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create server: %w", err)
 			}
+
+			var wg sync.WaitGroup
+
+			// Start the watcher
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				watcher.Start(ctx)
+			}()
+
+			// Handle shutdown signals
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				select {
+				case <-sigChan:
+					colorlog.Info("shutdown signal received")
+					close(shutdownChan)
+				case <-ctx.Done():
+					colorlog.Info("context cancelled")
+				}
+			}()
+
+			// Run the server - this will block until shutdown
 			if err := server.Run(app.ShutdownChan); err != nil {
-				colorlog.Error("%v", err)
-				return err
+				colorlog.Error("server error: %v", err)
+				return fmt.Errorf("server error: %w", err)
 			}
+
+			// Wait for all goroutines to finish
+			wg.Wait()
 			return nil
 		},
 	}

@@ -15,6 +15,7 @@ type SyncService interface {
 	ListSyncRules(ctx context.Context) ([]database.ListSyncRulesGroupByProfileRow, error)
 	RemoveSyncRuleByProfile(ctx context.Context, profileName, sourceDir string) error
 	GetSyncStatusByProfileName(ctx context.Context, profileName string) (database.GetSyncStatusByProfileNameRow, error)
+	// RunSyncRule(ctx context.Context, profileName string) error
 }
 
 type Sync struct {
@@ -98,3 +99,69 @@ func checkIsDirExists(dir string) bool {
 	_, err := os.Stat(dir)
 	return !os.IsNotExist(err)
 }
+
+// func (s *Sync) RunSyncRule(ctx context.Context, profileName string) error {
+// 	profileID, err := s.DB.GetProfileIDByName(ctx, profileName)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to get profile ID: %w", err)
+// 	}
+
+// 	syncRules, err := s.DB.ListSyncRulesByProfileID(ctx, profileID)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to list sync rules: %w", err)
+// 	}
+// 	if len(syncRules) == 0 {
+// 		return fmt.Errorf("no sync rules found for profile '%s'", profileName)
+// 	}
+
+// 	watcher, err := sync.NewSyncWatcher(s.DB)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to create sync watcher: %w", err)
+// 	}
+// 	defer func() {
+// 		colorlog.Info("cleaning up watcher resources")
+// 		watcher.Close()
+// 	}()
+
+// 	var watchErrors []string
+// 	for _, rule := range syncRules {
+// 		if err := watcher.AddDirectory(rule.SourceDir); err != nil {
+// 			errMsg := fmt.Sprintf("failed to watch '%s': %v", rule.SourceDir, err)
+// 			colorlog.Error(errMsg)
+// 			watchErrors = append(watchErrors, errMsg)
+// 		} else {
+// 			colorlog.Info("watching directory: %s", rule.SourceDir)
+// 		}
+// 	}
+// 	if len(watchErrors) == len(syncRules) {
+// 		return fmt.Errorf("no directories could be watched: %s", strings.Join(watchErrors, "; "))
+// 	}
+
+// 	colorlog.Info("starting sync watcher for profile '%s'", profileName)
+// 	watcher.Start(ctx)
+// 	done := make(chan struct{})
+
+// 	// Start watcher with proper shutdown coordination
+// 	go func() {
+// 		watcher.Run(ctx) // Blocking version within goroutine
+// 		close(done)      // Signal completion
+// 	}()
+
+// 	// Wait for either context cancellation or watcher completion
+// 	select {
+// 	case <-ctx.Done():
+// 		colorlog.Info("received shutdown signal, stopping watcher...")
+// 		watcher.Stop() // Graceful shutdown
+// 		// Wait for watcher to finish cleanup with timeout
+// 		select {
+// 		case <-done:
+// 			colorlog.Info("watcher stopped gracefully")
+// 		case <-time.After(5 * time.Second):
+// 			colorlog.Warn("watcher shutdown timed out")
+// 		}
+// 		return ctx.Err()
+// 	case <-done:
+// 		colorlog.Info("watcher completed naturally")
+// 		return nil
+// 	}
+// }

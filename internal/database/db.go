@@ -87,6 +87,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.listSyncRulesStmt, err = db.PrepareContext(ctx, listSyncRules); err != nil {
 		return nil, fmt.Errorf("error preparing query ListSyncRules: %w", err)
 	}
+	if q.listSyncRulesByProfileIDStmt, err = db.PrepareContext(ctx, listSyncRulesByProfileID); err != nil {
+		return nil, fmt.Errorf("error preparing query ListSyncRulesByProfileID: %w", err)
+	}
 	if q.listSyncRulesGroupByProfileStmt, err = db.PrepareContext(ctx, listSyncRulesGroupByProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query ListSyncRulesGroupByProfile: %w", err)
 	}
@@ -224,6 +227,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing listSyncRulesStmt: %w", cerr)
 		}
 	}
+	if q.listSyncRulesByProfileIDStmt != nil {
+		if cerr := q.listSyncRulesByProfileIDStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing listSyncRulesByProfileIDStmt: %w", cerr)
+		}
+	}
 	if q.listSyncRulesGroupByProfileStmt != nil {
 		if cerr := q.listSyncRulesGroupByProfileStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing listSyncRulesGroupByProfileStmt: %w", cerr)
@@ -329,6 +337,7 @@ type Queries struct {
 	listIgnorePatternStmt                *sql.Stmt
 	listProfilesStmt                     *sql.Stmt
 	listSyncRulesStmt                    *sql.Stmt
+	listSyncRulesByProfileIDStmt         *sql.Stmt
 	listSyncRulesGroupByProfileStmt      *sql.Stmt
 	listUnresolvedConflictsStmt          *sql.Stmt
 	removeIgnorePatternStmt              *sql.Stmt
@@ -365,6 +374,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		listIgnorePatternStmt:                q.listIgnorePatternStmt,
 		listProfilesStmt:                     q.listProfilesStmt,
 		listSyncRulesStmt:                    q.listSyncRulesStmt,
+		listSyncRulesByProfileIDStmt:         q.listSyncRulesByProfileIDStmt,
 		listSyncRulesGroupByProfileStmt:      q.listSyncRulesGroupByProfileStmt,
 		listUnresolvedConflictsStmt:          q.listUnresolvedConflictsStmt,
 		removeIgnorePatternStmt:              q.removeIgnorePatternStmt,

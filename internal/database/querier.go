@@ -30,6 +30,7 @@ type Querier interface {
 	ListIgnorePattern(ctx context.Context, profileID int64) ([]IgnorePattern, error)
 	ListProfiles(ctx context.Context) ([]Profile, error)
 	ListSyncRules(ctx context.Context, profileID int64) ([]SyncRule, error)
+	ListSyncRulesByProfileID(ctx context.Context, profileID int64) ([]SyncRule, error)
 	ListSyncRulesGroupByProfile(ctx context.Context) ([]ListSyncRulesGroupByProfileRow, error)
 	ListUnresolvedConflicts(ctx context.Context, profileID int64) ([]Conflict, error)
 	RemoveIgnorePattern(ctx context.Context, id int64) error

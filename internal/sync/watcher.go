@@ -3,8 +3,8 @@ package sync
 import (
 	"context"
 	"fmt"
-	"log"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -16,7 +16,7 @@ import (
 type SyncWatcher struct {
 	// Core components
 	watcher   *fsnotify.Watcher
-	Worker    *SyncWorker
+	worker    *SyncWorker
 	db        *database.Queries
 	syncQueue chan *SyncOperation
 
@@ -42,42 +42,70 @@ func NewSyncWatcher(db *database.Queries) (*SyncWatcher, error) {
 		fileHashMap: make(map[string]string),
 	}
 
-	if err := sw.loadIgnoreList(); err != nil {
-		return nil, err
-	}
-
-	worker, err := NewSyncWorker(db, sw.syncQueue)
+	worker, err := NewSyncWorker(db, sw.syncQueue, runtime.NumCPU())
 	if err != nil {
 		return nil, err
 	}
 
-	sw.Worker = worker
+	sw.worker = worker
 	return sw, nil
 }
 
-func (sw *SyncWatcher) Start() {
+func (sw *SyncWatcher) Start(ctx context.Context) {
 	sw.wg.Add(1)
 	go func() {
 		defer sw.wg.Done()
-
-		debounceHandler := sw.debounce(DebounceTime, sw.handleEvent)
-		for {
-			select {
-			case event, ok := <-sw.watcher.Events:
-				if !ok {
-					return
-				}
-				debounceHandler(event)
-
-			case err, ok := <-sw.watcher.Errors:
-				if !ok {
-					return
-				}
-				log.Fatalf("watcher err in event loop: %v", err)
-			}
-		}
+		sw.eventLoop(ctx)
 	}()
 	colorlog.Success("SyncWatcher started successfully.")
+}
+
+func (sw *SyncWatcher) Close() {
+	sw.mu.Lock()
+	defer sw.mu.Unlock()
+
+	if err := sw.watcher.Close(); err != nil {
+		colorlog.Error("failed to close fsnotify watcher: %v", err)
+	}
+
+	sw.worker.close()
+
+	done := make(chan struct{})
+	go func() {
+		sw.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		colorlog.Success("All workers exited successfully")
+	case <-time.After(5 * time.Second):
+		colorlog.Warn("Timeout waiting for workers to exit - forcing shutdown")
+	}
+
+	colorlog.Success("SyncWatcher closed successfully.")
+}
+
+func (sw *SyncWatcher) eventLoop(ctx context.Context) {
+	debounceHandler := sw.debounce(DebounceTime, sw.handleEvent)
+	for {
+		select {
+		case event, ok := <-sw.watcher.Events:
+			if !ok {
+				return
+			}
+			debounceHandler(event)
+		case err, ok := <-sw.watcher.Errors:
+			if !ok {
+				return
+			}
+			colorlog.Error("watcher err in event loop: %v", err)
+			return
+		case <-ctx.Done():
+			colorlog.Info("SyncWatcher event loop terminated.")
+			return
+		}
+	}
 }
 
 // debounce creates a debounced version of the given handler function.
@@ -119,6 +147,11 @@ func (sw *SyncWatcher) handleEvent(event fsnotify.Event) {
 	profileID, err := sw.getProfileIDForPath(event.Name)
 	if err != nil {
 		colorlog.Error("no profile found for this file: %s", event.Name)
+		return
+	}
+
+	if err := sw.loadIgnoreList(profileID); err != nil {
+		colorlog.Error("failed to load ignore list for profile %d: %v", profileID, err)
 		return
 	}
 
@@ -186,32 +219,13 @@ func (sw *SyncWatcher) RemoveDirectory(path string) error {
 	return err
 }
 
-func (sw *SyncWatcher) Close() {
+func (sw *SyncWatcher) loadIgnoreList(profileID int64) error {
 	sw.mu.Lock()
 	defer sw.mu.Unlock()
-	err := sw.watcher.Close()
-	if err != nil {
-		colorlog.Error("failed to close fsnotify watcher: %v", err)
-	}
-	close(sw.syncQueue)
-	sw.wg.Wait()
-	colorlog.Success("SyncWatcher closed successfully.")
-}
-
-func (sw *SyncWatcher) loadIgnoreList() error {
-	sw.mu.Lock()
-	defer sw.mu.Unlock()
-
-	profiles, err := sw.db.ListProfiles(context.Background())
-	if err != nil {
-		return fmt.Errorf("failed to list profiles: %w", err)
-	}
 
 	sw.ignoreList = make(map[int64][]string)
-	for _, profile := range profiles {
-		if err := sw.loadIgnorePatternsForProfile(profile.ID); err != nil {
-			return fmt.Errorf("failed to load ignore patterns for profile %d: %w", profile.ID, err)
-		}
+	if err := sw.loadIgnorePatternsForProfile(profileID); err != nil {
+		return fmt.Errorf("failed to load ignore patterns for profile %d: %w", profileID, err)
 	}
 
 	return nil
@@ -246,9 +260,6 @@ func (sw *SyncWatcher) getProfileIDForPath(path string) (int64, error) {
 }
 
 func (sw *SyncWatcher) shouldIgnore(path string, profileID int64) bool {
-	sw.mu.Lock()
-	defer sw.mu.Unlock()
-
 	petterns, exists := sw.ignoreList[profileID]
 	if !exists {
 		return false
