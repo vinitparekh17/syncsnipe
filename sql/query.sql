@@ -88,6 +88,11 @@ SELECT sr.profile_id as pid,
   GROUP BY sr.profile_id
   ORDER BY sr.profile_id;
 
+-- name: ListSyncRulesByProfileID :many
+SELECT *
+  FROM sync_rules
+  WHERE profile_id = ? AND status IS NOT 0;
+
 -- name: UpdateSyncRule :exec
 UPDATE sync_rules
   SET status = ?, last_run_successful = ?, updated_at = strftime('%s', 'now')
