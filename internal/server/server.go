@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
-	"github.com/vinitparekh17/syncsnipe/internal/core"
 	"github.com/vinitparekh17/syncsnipe/internal/handler"
 	"github.com/vinitparekh17/syncsnipe/internal/stuffbin"
 )
@@ -16,10 +15,9 @@ import (
 type SyncServer struct {
 	server *http.Server
 	mux    *http.ServeMux
-	app    *core.SyncEngine
 }
 
-func NewServer(app *core.SyncEngine, port string, frontendDir string) (*SyncServer, error) {
+func NewServer(port string, frontendDir string) (*SyncServer, error) {
 	mux, err := NewMuxRouter(frontendDir)
 	if err != nil {
 		colorlog.Error("error creating mux router: %v", err)
@@ -38,7 +36,6 @@ func NewServer(app *core.SyncEngine, port string, frontendDir string) (*SyncServ
 			ReadTimeout: 5 * time.Second,
 		},
 		mux: mux,
-		app: app,
 	}, nil
 }
 
@@ -50,7 +47,6 @@ func NewMuxRouter(frontendDir string) (*http.ServeMux, error) {
 	}
 
 	mux.Handle("/_app/", handler.ServeApp(fs, frontendDir))
-	mux.Handle("/assets/", handler.ServeAssets(fs, frontendDir))
 	mux.HandleFunc("/", handler.ServeIndexPage(fs, frontendDir))
 	return mux, nil
 }
@@ -77,6 +73,5 @@ func (s *SyncServer) Run(shutDownChan <-chan struct{}) error {
 }
 
 func (s *SyncServer) shutdown(shutDownCtx context.Context) error {
-	s.app.Watcher.Close()
 	return s.server.Shutdown(shutDownCtx)
 }

@@ -130,9 +130,9 @@ func executeCommandWithContext(ctx context.Context, cmd *cobra.Command, args ...
 
 // GetWebCmd returns a configured web command for testing
 func GetWebCmd(t *testing.T, frontendDir string) *cobra.Command {
-	q, err := SetupTest(t)
+	_, err := SetupTest(t)
 	require.NoError(t, err)
-	webCmd, err := web.NewWebCmd(q, frontendDir)
+	webCmd, err := web.NewWebCmd(frontendDir)
 	require.NoError(t, err)
 	return webCmd
 }
