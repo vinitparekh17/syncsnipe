@@ -11,12 +11,8 @@ import (
 	"github.com/vinitparekh17/syncsnipe/internal/database"
 )
 
-// TODO: Make this configurable
-const (
-	dbFile = "syncsnipe.db"
-)
-
 var (
+	dbFile      = "syncsnipe.db"
 	rootCmd     = &cobra.Command{Use: "syncsnipe"}
 	schemaFile  = filepath.Join("sql", "schema.sql")
 	frontendDir = filepath.Join("frontend", "build")
@@ -46,6 +42,8 @@ func Execute() error {
 
 	cliCmd := cli.NewCliCmd(dbTx)
 	rootCmd.AddCommand(cliCmd)
+
+	rootCmd.PersistentFlags().StringVarP(&dbFile, "db", "d", dbFile, "path to the database file")
 	if err := rootCmd.Execute(); err != nil {
 		return fmt.Errorf("unable to execute root command: %w", err)
 	}
