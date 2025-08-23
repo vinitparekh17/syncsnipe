@@ -44,11 +44,15 @@
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [
+			"@tailwindcss/oxide",
 			"esbuild"
 		],
 		"overrides": {
 			"cookie": "^0.7.0"
-		}
+		},
+		"ignoredBuiltDependencies": [
+			"@tailwindcss/oxide"
+		]
 	},
 	"engines": {
 		"pnpm": ">=9.0.0"
