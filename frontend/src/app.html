@@ -3,6 +3,15 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!-- Anti-FOUC: apply theme before first paint -->
+		<script>
+			(function () {
+				var saved = localStorage.getItem('syncsnipe-theme');
+				var preferred = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+				var theme = saved || preferred;
+				document.documentElement.setAttribute('data-theme', theme);
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

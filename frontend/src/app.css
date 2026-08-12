@@ -1,2 +1,206 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
+
+/* ─────────────────────────────────────────────────────────────────
+   SyncSnipe Design System — Apple-inspired tokens
+   Theme set via [data-theme="light"|"dark"] on <html>
+───────────────────────────────────────────────────────────────────*/
+
+@layer base {
+  :root {
+    /* Brand palette */
+    --color-brand-purple: 138 79 255;
+    --color-brand-teal: 32 230 181;
+
+    /* ── Dark defaults ── */
+    --bg-base:            #0d0d11;
+    --bg-elevated:        #18181f;
+    --bg-surface:         rgba(30, 30, 40, 0.85);
+    --bg-surface-raised:  rgba(38, 38, 52, 0.90);
+    --bg-inset:           rgba(255, 255, 255, 0.05);
+    --bg-inset-hover:     rgba(255, 255, 255, 0.09);
+    --bg-scrim:           rgba(0, 0, 0, 0.65);
+
+    --border-subtle:      rgba(255, 255, 255, 0.07);
+    --border-default:     rgba(255, 255, 255, 0.11);
+    --border-strong:      rgba(255, 255, 255, 0.20);
+
+    --text-primary:       #f2f2f7;
+    --text-secondary:     #8e8e9a;
+    --text-tertiary:      #56565f;
+    --text-on-brand:      #ffffff;
+
+    --sidebar-bg:         rgba(13, 13, 17, 0.85);
+    --sidebar-border:     rgba(255, 255, 255, 0.07);
+
+    --shadow-sm:          0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md:          0 4px 12px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3);
+    --shadow-lg:          0 8px 32px rgba(0,0,0,0.6), 0 4px 8px rgba(0,0,0,0.4);
+    --shadow-brand:       0 8px 24px rgba(138, 79, 255, 0.25);
+
+    --blur-material:      blur(24px) saturate(180%);
+    --blur-overlay:       blur(40px);
+
+    color-scheme: dark;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  /* ── Light theme ── */
+  [data-theme='light'] {
+    --bg-base:            #f2f2f7;
+    --bg-elevated:        #ffffff;
+    --bg-surface:         rgba(255, 255, 255, 0.82);
+    --bg-surface-raised:  rgba(255, 255, 255, 0.96);
+    --bg-inset:           rgba(0, 0, 0, 0.045);
+    --bg-inset-hover:     rgba(0, 0, 0, 0.08);
+    --bg-scrim:           rgba(0, 0, 0, 0.30);
+
+    --border-subtle:      rgba(0, 0, 0, 0.07);
+    --border-default:     rgba(0, 0, 0, 0.11);
+    --border-strong:      rgba(0, 0, 0, 0.20);
+
+    --text-primary:       #1c1c1e;
+    --text-secondary:     #636366;
+    --text-tertiary:      #aeaeb2;
+    --text-on-brand:      #ffffff;
+
+    --sidebar-bg:         rgba(242, 242, 247, 0.85);
+    --sidebar-border:     rgba(0, 0, 0, 0.09);
+
+    --shadow-sm:          0 1px 3px rgba(0,0,0,0.09), 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md:          0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.07);
+    --shadow-lg:          0 8px 32px rgba(0,0,0,0.14), 0 4px 8px rgba(0,0,0,0.07);
+    --shadow-brand:       0 8px 24px rgba(138, 79, 255, 0.20);
+
+    --blur-material:      blur(24px) saturate(200%);
+    --blur-overlay:       blur(40px);
+
+    color-scheme: light;
+  }
+
+  /* ── Global base — ensure tokens propagate ── */
+  html {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+  }
+
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    transition:
+      background-color 250ms cubic-bezier(0.4, 0, 0.2, 1),
+      color 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Selection */
+  ::selection {
+    background-color: rgba(138 79 255 / 0.28);
+    color: var(--text-primary);
+  }
+
+  /* Thin scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-default);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+  /* Anchor scroll offset so nav doesn't hide under sidebar */
+  [id] { scroll-margin-top: 1.5rem; }
+}
+
+/* ── Utility classes ────────────────────────────────────────────── */
+@layer components {
+  /* Apple-style button press feedback — responds on pointer-down */
+  .btn-press {
+    transition:
+      transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      opacity 120ms ease-out;
+    cursor: pointer;
+  }
+  .btn-press:active {
+    transform: scale(0.97);
+    opacity: 0.90;
+  }
+
+  /* Translucent material surface */
+  .surface {
+    background: var(--bg-surface);
+    backdrop-filter: var(--blur-material);
+    -webkit-backdrop-filter: var(--blur-material);
+    border: 1px solid var(--border-default);
+    box-shadow: var(--shadow-md);
+    transition:
+      background 250ms ease,
+      border-color 250ms ease,
+      box-shadow 250ms ease;
+  }
+
+  .surface-raised {
+    background: var(--bg-surface-raised);
+    backdrop-filter: var(--blur-material);
+    -webkit-backdrop-filter: var(--blur-material);
+    border: 1px solid var(--border-default);
+    box-shadow: var(--shadow-lg);
+    transition:
+      background 250ms ease,
+      border-color 250ms ease;
+  }
+
+  /* Card hover lift */
+  .card-lift {
+    transition:
+      transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 200ms ease,
+      border-color 200ms ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border-strong);
+  }
+  .card-lift:active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  /* Theme-aware text helpers (use instead of inline styles) */
+  .text-primary   { color: var(--text-primary)   !important; }
+  .text-secondary { color: var(--text-secondary) !important; }
+  .text-tertiary  { color: var(--text-tertiary)  !important; }
+
+  /* Theme-aware background helpers */
+  .bg-surface        { background: var(--bg-surface);       }
+  .bg-surface-raised { background: var(--bg-surface-raised); }
+  .bg-inset          { background: var(--bg-inset);         }
+  .bg-inset-hover    { background: var(--bg-inset-hover);   }
+
+  /* Theme-aware border helpers */
+  .border-subtle   { border-color: var(--border-subtle)  !important; }
+  .border-themed   { border-color: var(--border-default) !important; }
+  .border-strong   { border-color: var(--border-strong)  !important; }
+}
+
+/* ── Accessibility overrides ────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .btn-press:active { transform: none !important; }
+  .card-lift:hover  { transform: none !important; }
+  body              { transition: none !important; }
+  .surface          { transition: none !important; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .surface, .surface-raised {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  [data-theme='light'] .surface,
+  [data-theme='light'] .surface-raised { background: #ffffff !important; }
+  [data-theme='dark']  .surface,
+  [data-theme='dark']  .surface-raised { background: #1a1a24 !important; }
+}
