@@ -1,6 +1,8 @@
 package main
 
 import (
+	_ "net/http/pprof"
+
 	"github.com/vinitparekh17/syncsnipe/cmd"
 	"github.com/vinitparekh17/syncsnipe/internal/cli"
 )

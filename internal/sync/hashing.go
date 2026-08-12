@@ -3,6 +3,7 @@ package sync
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +12,15 @@ import (
 )
 
 func ComputeHash(path string) (string, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		colorlog.Error("error checking file %s while computing hash: %v", filepath.Base(path), err)
+		return "", err
+	}
+	if fi.IsDir() {
+		return "", fmt.Errorf("%s is a directory", path)
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		colorlog.Error("error opening file %s while computing hash: %v", filepath.Base(path), err)

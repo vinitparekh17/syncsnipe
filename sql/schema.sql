@@ -27,12 +27,14 @@ CREATE TABLE IF NOT EXISTS sync_rules (
     source_dir TEXT NOT NULL UNIQUE,
     target_dir TEXT NOT NULL,
     status INTEGER NOT NULL DEFAULT 1,
+    initial_sync_mode TEXT NOT NULL DEFAULT 'mirror', -- 'mirror' or 'events_only'
     last_run_successful BOOLEAN DEFAULT NULL, -- Track success or failure of last run
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     UNIQUE(profile_id, source_dir),
     CHECK (source_dir != target_dir),
     CHECK(status IN (0, 1, 2, 3, 4)), -- 0: active, 1: idle, 2: scheduled, 3: paused, 4: disabled
+    CHECK(initial_sync_mode IN ('mirror', 'events_only')),
     FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 );
 

@@ -2,6 +2,8 @@ package sync
 
 import (
 	"context"
+	"io"
+	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -11,166 +13,117 @@ import (
 	"github.com/vinitparekh17/syncsnipe/internal/database"
 )
 
+// SyncOperation is a fully resolved, source-authoritative filesystem action.
+// The watcher resolves paths before queueing so workers never need to query rules.
 type SyncOperation struct {
-	profileID int64
-	path      string
-	operation string
-	hash      string
-	timeStamp time.Time
+	profileID  int64
+	sourcePath string
+	targetPath string
+	operation  string
+	timeStamp  time.Time
 }
 
 type SyncWorker struct {
-	db          *database.Queries
-	syncQueue   chan *SyncOperation
-	workerCount int
-	stopCh      chan struct{}
-	rules       map[string]string
-	wg          sync.WaitGroup
+	db        *database.Queries
+	syncQueue <-chan *SyncOperation
+	workers   int
+	wg        sync.WaitGroup
 }
 
-func NewSyncWorker(db *database.Queries, syncQueue chan *SyncOperation, workerCount int) (*SyncWorker, error) {
-	if workerCount <= 0 {
-		workerCount = runtime.NumCPU() // Default to CPU count
+func NewSyncWorker(db *database.Queries, queue <-chan *SyncOperation, workers int) (*SyncWorker, error) {
+	if workers < 1 {
+		workers = runtime.NumCPU()
 	}
-
-	return &SyncWorker{
-		db:          db,
-		syncQueue:   syncQueue,
-		rules:       make(map[string]string),
-		workerCount: workerCount,
-		stopCh:      make(chan struct{}),
-	}, nil
+	return &SyncWorker{db: db, syncQueue: queue, workers: workers}, nil
 }
 
-func (s *SyncWorker) Start(ctx context.Context) {
-	// Launch the worker pool
-	for i := range s.workerCount {
-		s.wg.Add(1)
-		go func(workerID int) {
-			defer s.wg.Done()
-			s.workerLoop(ctx, workerID)
-		}(i)
-	}
-
-	colorlog.Success("Started sync worker pool with %d workers", s.workerCount)
-}
-
-func (s *SyncWorker) workerLoop(ctx context.Context, workerID int) {
-	for {
-		select {
-		case op, ok := <-s.syncQueue:
-			if !ok {
-				colorlog.Info("Worker %d stopping: queue closed", workerID)
-				return
+func (w *SyncWorker) Start(ctx context.Context) {
+	for i := 0; i < w.workers; i++ {
+		w.wg.Add(1)
+		go func() {
+			defer w.wg.Done()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case op, ok := <-w.syncQueue:
+					if !ok {
+						return
+					}
+					w.processOperation(ctx, op)
+				}
 			}
-			s.processOperation(op)
-		case <-ctx.Done():
-			colorlog.Info("Worker %d stopping: context canceled", workerID)
-			return
-		case <-s.stopCh:
-			colorlog.Info("Worker %d stopping: stop signal received", workerID)
+		}()
+	}
+}
+
+func (w *SyncWorker) Wait() { w.wg.Wait() }
+
+func (w *SyncWorker) processOperation(ctx context.Context, op *SyncOperation) {
+	info, err := os.Lstat(op.sourcePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if err := os.RemoveAll(op.targetPath); err != nil && !os.IsNotExist(err) {
+				colorlog.Error("removing target %s: %v", op.targetPath, err)
+			} else {
+				colorlog.Info("deleted target %s", op.targetPath)
+			}
+			_ = w.db.DeleteFile(ctx, database.DeleteFileParams{SourcePath: op.sourcePath, TargetPath: op.targetPath})
 			return
 		}
-	}
-}
-
-// TODO: Complete the logic, must support all file events
-func (s *SyncWorker) processOperation(op *SyncOperation) {
-	colorlog.Info("Processing operation %s on %s", op.operation, op.path)
-
-	if err := s.loadRules(op.profileID); err != nil {
-		colorlog.Error("error loading rules for profile %d: %v", op.profileID, err)
+		colorlog.Error("stat source %s: %v", op.sourcePath, err)
 		return
 	}
-
-	targetPath, err := s.getTargetPath(op.path)
-	if err != nil {
-		colorlog.Error("error getting target path for %s: %v", op.path, err)
+	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() && !info.IsDir() {
 		return
 	}
-
-	switch op.operation {
-	case CreateOrModifyEvent:
-		s.handleCreateOrModify(op, targetPath)
-	default:
-		colorlog.Warn("Unsupported operation %s", op.operation)
-	}
-}
-
-func (s *SyncWorker) handleCreateOrModify(op *SyncOperation, targetPath string) {
-	existing, err := s.db.GetFile(context.Background(), database.GetFileParams{
-		SourcePath: op.path,
-		TargetPath: targetPath,
-	})
-
-	if err != nil {
-		colorlog.Error("error getting file from db: %v", err)
-		return
-	}
-
-	if existing.Hash != op.hash && existing.LastSynced > op.timeStamp.Unix() {
-		_, err := s.db.AddConflict(context.Background(), database.AddConflictParams{
-			SourcePath: op.path,
-			TargetPath: targetPath,
-			SourceHash: op.hash,
-			TargetHash: existing.Hash,
-			SourceTime: op.timeStamp.Unix(),
-			TargetTime: existing.ModTime,
-			DetectedAt: time.Now().Unix(),
-		})
-
-		if err != nil {
-			colorlog.Error("error adding conflict to db: %v", err)
+	if info.IsDir() {
+		if err := os.MkdirAll(op.targetPath, info.Mode().Perm()); err != nil {
+			colorlog.Error("creating target directory %s: %v", op.targetPath, err)
 		}
-		colorlog.Warn("Conflict detected for %s", op.path)
 		return
 	}
 
-	if err := copyFile(op.path, targetPath); err != nil {
-		colorlog.Error("error copying file %s to %s: %v", op.path, targetPath, err)
-		return
-	}
-
-	err = s.db.UpsertFile(context.Background(), database.UpsertFileParams{
-		SourcePath: op.path,
-		TargetPath: targetPath,
-		Hash:       op.hash,
-		Size:       getFileSize(op.path),
-		ModTime:    op.timeStamp.Unix(),
-		LastSynced: time.Now().Unix(),
-	})
-
+	hash, err := ComputeHash(op.sourcePath)
 	if err != nil {
-		colorlog.Error("error upserting file to db: %v", err)
+		return
 	}
-
+	if err := copyFileAtomic(op.sourcePath, op.targetPath, info.Mode().Perm()); err != nil {
+		colorlog.Error("copying %s to %s: %v", op.sourcePath, op.targetPath, err)
+		return
+	}
+	colorlog.Success("synced %s -> %s (%d bytes)", op.sourcePath, op.targetPath, info.Size())
+	if err := w.db.UpsertFile(ctx, database.UpsertFileParams{
+		SourcePath: op.sourcePath, TargetPath: op.targetPath, Hash: hash,
+		Size: info.Size(), ModTime: info.ModTime().Unix(), LastSynced: time.Now().Unix(),
+	}); err != nil {
+		colorlog.Error("recording sync for %s: %v", op.sourcePath, err)
+	}
 }
 
-func (s *SyncWorker) getTargetPath(sourcePath string) (string, error) {
-	dir := filepath.Dir(sourcePath)
-	targetDir, ok := s.rules[dir]
-	if !ok {
-		return "", nil
+func copyFileAtomic(source, target string, mode os.FileMode) error {
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		return err
 	}
-	return filepath.Join(targetDir, filepath.Base(sourcePath)), nil
-}
-
-func (s *SyncWorker) loadRules(profileID int64) error {
-	rules, err := s.db.ListSyncRules(context.Background(), profileID)
+	src, err := os.Open(source)
 	if err != nil {
 		return err
 	}
-
-	for _, rule := range rules {
-		s.rules[rule.SourceDir] = rule.TargetDir
+	defer src.Close()
+	tmp, err := os.CreateTemp(filepath.Dir(target), ".syncsnipe-*")
+	if err != nil {
+		return err
 	}
-	return nil
-}
-
-func (s *SyncWorker) close() {
-	close(s.stopCh)
-	s.wg.Wait()
-	close(s.syncQueue)
-
-	colorlog.Success("SyncWorker pool shutdown complete")
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if _, err = io.Copy(tmp, src); err == nil {
+		err = tmp.Chmod(mode)
+	}
+	if closeErr := tmp.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return err
+	}
+	return os.Rename(tmpName, target)
 }

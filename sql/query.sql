@@ -44,12 +44,12 @@ DELETE FROM profiles
 
 -- name: AddSyncRule :one
 INSERT INTO sync_rules (
-  profile_id, source_dir, target_dir, created_at, updated_at
-) VALUES ( ?, ?, ?, strftime('%s', 'now'), strftime('%s', 'now'))
+  profile_id, source_dir, target_dir, status, initial_sync_mode, created_at, updated_at
+) VALUES ( ?, ?, ?, 0, ?, strftime('%s', 'now'), strftime('%s', 'now'))
 RETURNING id;
 
 -- name: GetSyncRule :one
-SELECT *
+SELECT id, profile_id, source_dir, target_dir, status, initial_sync_mode, last_run_successful, created_at, updated_at
   FROM sync_rules
   WHERE id = ?;
 
@@ -59,6 +59,7 @@ SELECT sr.id,
   sr.source_dir,
   sr.target_dir,
   sr.status,
+  sr.initial_sync_mode,
   sr.created_at,
   sr.updated_at
   FROM sync_rules sr
@@ -72,7 +73,7 @@ SELECT profile_id
   LIMIT 1;
 
 -- name: ListSyncRules :many
-SELECT *
+SELECT id, profile_id, source_dir, target_dir, status, initial_sync_mode, last_run_successful, created_at, updated_at
   FROM sync_rules
   WHERE profile_id = ? AND status IS NOT 'disabled'
   ORDER BY source_dir;
@@ -82,14 +83,15 @@ SELECT sr.profile_id as pid,
   p.name as profile_name,
   COUNT(sr.id) as rule_count,
   sr.source_dir,
-  sr.target_dir
+  sr.target_dir,
+  sr.initial_sync_mode
   FROM sync_rules sr
   JOIN profiles p ON sr.profile_id = p.id
   GROUP BY sr.profile_id
   ORDER BY sr.profile_id;
 
 -- name: ListSyncRulesByProfileID :many
-SELECT *
+SELECT id, profile_id, source_dir, target_dir, status, initial_sync_mode, last_run_successful, created_at, updated_at
   FROM sync_rules
   WHERE profile_id = ? AND status IS NOT 0;
 
@@ -167,6 +169,12 @@ SELECT *
   FROM ignore_patterns
   WHERE profile_id = ?;
 
+-- name: ListAllActiveRules :many
+SELECT id, profile_id, source_dir, target_dir, status, initial_sync_mode, last_run_successful, created_at, updated_at
+  FROM sync_rules
+  WHERE status = 0
+  ORDER BY source_dir;
+
 -- name: RemoveIgnorePattern :exec
 DELETE FROM ignore_patterns
   WHERE id = ?;
@@ -174,3 +182,18 @@ DELETE FROM ignore_patterns
 -- name: RemoveIgnorePatternByProfileName :execrows
 DELETE FROM ignore_patterns
   WHERE profile_id = ? AND pattern = ?;
+
+-- name: GetDashboardStats :one
+SELECT 
+  (SELECT COUNT(*) FROM files) as total_files,
+  (SELECT COUNT(*) FROM profiles) as total_profiles,
+  (SELECT COUNT(*) FROM sync_rules WHERE status = 0) as active_rules,
+  (SELECT COUNT(*) FROM conflicts WHERE resolution_status = 0) as unresolved_conflicts,
+  (SELECT COUNT(*) FROM sync_rules WHERE status = 2) as pending_syncs,
+  (SELECT COALESCE(SUM(size), 0) FROM files) as total_storage_bytes;
+
+-- name: ListRecentFiles :many
+SELECT source_path, target_path, size, last_synced
+  FROM files
+  ORDER BY last_synced DESC
+  LIMIT 10;

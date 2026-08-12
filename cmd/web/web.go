@@ -7,38 +7,45 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
+	"github.com/vinitparekh17/syncsnipe/internal/colorlog"
+	"github.com/vinitparekh17/syncsnipe/internal/database"
 	"github.com/vinitparekh17/syncsnipe/internal/server"
+	internalsync "github.com/vinitparekh17/syncsnipe/internal/sync"
 )
 
 const DefaultPort = "8080"
 
 var port string
 
-func NewWebCmd(frontendDir string) (*cobra.Command, error) {
+func NewWebCmd(frontendDir string, db *database.Queries) (*cobra.Command, error) {
 	webCmd := &cobra.Command{
 		Use:   "web",
 		Short: "run web interface",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Create and start the server
-			srv, err := server.NewServer(port, frontendDir)
+			// signal.NotifyContext cancels ctx on the first SIGINT/SIGTERM, then
+			// automatically restores default signal handling so a second Ctrl+C
+			// immediately kills the process if graceful shutdown stalls.
+			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+
+			// Start the file-sync watcher (non-blocking; goroutines exit when ctx is done).
+			if db != nil {
+				watcher, err := internalsync.NewSyncWatcher(db)
+				if err != nil {
+					colorlog.Error("failed to create sync watcher: %v", err)
+				} else {
+					watcher.Start(ctx)
+					defer watcher.Close()
+				}
+			}
+
+			// Build and run the HTTP server; blocks until ctx is cancelled or the
+			// server fails. srv.Run does a 5-second graceful shutdown internally.
+			srv, err := server.NewServer(port, frontendDir, db)
 			if err != nil {
 				return fmt.Errorf("failed to create server: %w", err)
 			}
-
-			shutdownChan := make(chan struct{})
-
-			go func() {
-				c := make(chan os.Signal, 1)
-				signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-				<-c
-				close(shutdownChan)
-			}()
-
-			if err := srv.Run(shutdownChan); err != nil {
-				return fmt.Errorf("server error: %w", err)
-			}
-
-			return nil
+			return srv.Run(ctx)
 		},
 	}
 

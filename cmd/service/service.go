@@ -77,7 +77,11 @@ func NewServiceManager(q *database.Queries) (*ServiceManager, error) {
 		DisplayName: serviceDisplayName,
 		Description: serviceDescription,
 		Executable:  execPath,
-		Arguments:   []string{"service", "run"}, // Important: tell service how to run
+		// The root command resolves the database and schema paths relative to
+		// the current directory. Windows services otherwise start in a system
+		// directory and create/read a different database.
+		WorkingDirectory: filepath.Dir(execPath),
+		Arguments:        []string{"service", "run"}, // Important: tell service how to run
 	}
 
 	svc, err := service.New(prg, svcConfig)
@@ -345,16 +349,13 @@ func (p *program) run(ctx context.Context) {
 		}
 		return
 	}
+	defer watcher.Close()
 
 	if p.logger != nil {
 		p.logger.Info("SyncSnipe service started successfully")
 	}
 
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
-		watcher.Start(ctx)
-	}()
+	watcher.Start(ctx)
 
 	<-ctx.Done()
 

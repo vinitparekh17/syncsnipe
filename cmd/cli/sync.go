@@ -30,7 +30,8 @@ A sync rule defines how files from a source directory should be synchronized to 
 
 // newAddSyncCmd creates the add sync rule subcommand
 func newAddSyncCmd(syncService core.SyncService) *cobra.Command {
-	return &cobra.Command{
+	var initialSyncMode string
+	cmd := &cobra.Command{
 		Use:   "add [profile] [source-dir] [target-dir]",
 		Short: "Add a new sync rule",
 		Long: `Add a new sync rule to a profile.
@@ -40,12 +41,14 @@ The source and target directories must be different.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			profile, sourceDir, targetDir := args[0], args[1], args[2]
 			return utils.VerifySuccess(
-				syncService.AddSyncRule(cmd.Context(), profile, sourceDir, targetDir),
+				syncService.AddSyncRule(cmd.Context(), profile, sourceDir, targetDir, initialSyncMode),
 				"Sync rule added successfully for profile '%s'",
 				profile,
 			)
 		},
 	}
+	cmd.Flags().StringVar(&initialSyncMode, "initial-sync", "mirror", "initial synchronization mode: mirror or events_only")
+	return cmd
 }
 
 // newUnsyncCmd creates the unsync subcommand

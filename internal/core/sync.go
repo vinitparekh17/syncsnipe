@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/vinitparekh17/syncsnipe/internal/database"
 )
 
 type SyncService interface {
-	AddSyncRule(ctx context.Context, profileName, sourceDir, targetDir string) error
+	AddSyncRule(ctx context.Context, profileName, sourceDir, targetDir, initialSyncMode string) error
 	ListSyncRules(ctx context.Context) ([]database.ListSyncRulesGroupByProfileRow, error)
 	RemoveSyncRuleByProfile(ctx context.Context, profileName, sourceDir string) error
 	GetSyncStatusByProfileName(ctx context.Context, profileName string) (database.GetSyncStatusByProfileNameRow, error)
@@ -27,7 +29,10 @@ func NewSync(q *database.Queries) SyncService {
 }
 
 // AddSyncRule inserts sync rule records after input sanitization
-func (s *Sync) AddSyncRule(ctx context.Context, profileName, sourceDir, targetDir string) error {
+func (s *Sync) AddSyncRule(ctx context.Context, profileName, sourceDir, targetDir, initialSyncMode string) error {
+	if initialSyncMode != "mirror" && initialSyncMode != "events_only" {
+		return errors.New("initial sync mode must be 'mirror' or 'events_only'")
+	}
 	if sourceDir == targetDir {
 		return errors.New("source directory and target directory must be different")
 	}
@@ -40,6 +45,10 @@ func (s *Sync) AddSyncRule(ctx context.Context, profileName, sourceDir, targetDi
 		return fmt.Errorf("target directory '%s' does not exist", targetDir)
 	}
 
+	if pathsOverlap(sourceDir, targetDir) {
+		return errors.New("source directory and target directory must not overlap")
+	}
+
 	profileID, err := s.DB.GetProfileIDByName(ctx, profileName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -49,9 +58,10 @@ func (s *Sync) AddSyncRule(ctx context.Context, profileName, sourceDir, targetDi
 	}
 
 	if _, err = s.DB.AddSyncRule(context.Background(), database.AddSyncRuleParams{
-		ProfileID: profileID,
-		SourceDir: sourceDir,
-		TargetDir: targetDir,
+		ProfileID:       profileID,
+		SourceDir:       sourceDir,
+		TargetDir:       targetDir,
+		InitialSyncMode: initialSyncMode,
 	}); err != nil {
 		return err
 	}
@@ -98,6 +108,20 @@ func (s *Sync) GetSyncStatusByProfileName(ctx context.Context, profileName strin
 func checkIsDirExists(dir string) bool {
 	_, err := os.Stat(dir)
 	return !os.IsNotExist(err)
+}
+
+func pathsOverlap(first, second string) bool {
+	firstAbs, firstErr := filepath.Abs(filepath.Clean(first))
+	secondAbs, secondErr := filepath.Abs(filepath.Clean(second))
+	if firstErr != nil || secondErr != nil {
+		return false
+	}
+	return isPathWithin(firstAbs, secondAbs) || isPathWithin(secondAbs, firstAbs)
+}
+
+func isPathWithin(root, path string) bool {
+	rel, err := filepath.Rel(root, path)
+	return err == nil && (rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))))
 }
 
 // func (s *Sync) RunSyncRule(ctx context.Context, profileName string) error {

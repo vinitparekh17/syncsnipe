@@ -2,6 +2,7 @@ package sync
 
 import (
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,6 +24,9 @@ func TestComputeHash(t *testing.T) {
 
 	// Permission error case
 	t.Run("PermissionError", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("POSIX chmod permission bits not supported on Windows")
+		}
 		os.Chmod(tmpFile.Name(), 0000) // No read perms
 		hash, err := ComputeHash(tmpFile.Name())
 		assert.Error(t, err)
@@ -47,7 +51,7 @@ func TestComputeHash(t *testing.T) {
 		hash, err := ComputeHash("non-existent")
 		assert.Error(t, err)
 		assert.Empty(t, hash)
-		assert.Contains(t, err.Error(), "no such file or directory")
+		assert.True(t, os.IsNotExist(err))
 	})
 
 	// Directory case
