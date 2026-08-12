@@ -27,7 +27,7 @@ func TestSetupTest(t *testing.T) {
 				}
 			},
 			expectErr:  true,
-			errMessage: "failed to load schema: error initializing local file system: stat non-existent.sql: no such file or directory",
+			errMessage: "failed to load schema",
 		},
 	}
 

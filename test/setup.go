@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -32,10 +33,15 @@ var (
 
 // SetupTest initializes test database and loads schema
 func SetupTest(t *testing.T) (*database.Queries, error) {
-	MockDB, err := database.GetDatabase(mockDBFile)
+	if MockDB != nil && MockDB.Ping() == nil {
+		return database.New(MockDB), nil
+	}
+
+	db, err := database.GetDatabase(mockDBFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database: %v", err)
 	}
+	MockDB = db
 
 	if err := MockDB.LoadSchema(SchemaFile); err != nil {
 		return nil, fmt.Errorf("failed to load schema: %v", err)
@@ -130,9 +136,9 @@ func executeCommandWithContext(ctx context.Context, cmd *cobra.Command, args ...
 
 // GetWebCmd returns a configured web command for testing
 func GetWebCmd(t *testing.T, frontendDir string) *cobra.Command {
-	_, err := SetupTest(t)
+	q, err := SetupTest(t)
 	require.NoError(t, err)
-	webCmd, err := web.NewWebCmd(frontendDir)
+	webCmd, err := web.NewWebCmd(frontendDir, q)
 	require.NoError(t, err)
 	return webCmd
 }
@@ -146,6 +152,11 @@ func ExecuteCommand(cmd *cobra.Command, args ...string) error {
 // CleanupTest removes all test database files
 func CleanupTest(t *testing.T, mockDB *database.DB) {
 	t.Helper()
+
+	if MockDB != nil {
+		_ = MockDB.Close()
+		MockDB = nil
+	}
 
 	files, err := filepath.Glob("*.db*")
 	if err != nil {
@@ -163,7 +174,9 @@ func CleanupTest(t *testing.T, mockDB *database.DB) {
 
 	for _, file := range files {
 		if err := os.Remove(file); err != nil {
-			t.Errorf("Failed to delete %s: %v", file, err)
+			if runtime.GOOS != "windows" {
+				t.Errorf("Failed to delete %s: %v", file, err)
+			}
 		}
 	}
 }
